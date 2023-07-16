@@ -40,3 +40,14 @@
     repo: 'https://github.com/romkatv/powerlevel10k.git'
     dest: "~/.oh-my-zsh/custom/themes/powerlevel10k"
   tags: zsh
+
+- name: Copy .zshrc, .alias, and .p10k.zsh
+  copy:
+    src: "{{ item.src }}"
+    dest: "~/"
+    mode: "0644"
+  loop: 
+    - src: "../dotfiles/.zshrc"
+    - src: "../dotfiles/.p10k.zsh"
+    - src: "../dotfiles/.aliases"
+  tags: zsh
