@@ -1,0 +1,60 @@
+- name: ensure lib fuse2 is installed debian
+  apt:
+    name:
+      - libfuse2
+  when: ansible_os_family == "Debian" 
+  tags: nvim
+- name: install neo vim linux
+  get_url:
+    url: "https://github.com/neovim/neovim/releases/latest/download/nvim.appimage"
+    dest: "/usr/local/bin/nvim"
+  when: >
+    ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+  tags: nvim
+
+- name: Set exectuable permission for nvim app image
+  when: >
+    ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+  file:
+    path: "/usr/local/bin/nvim"
+    mode: "u+x"
+  tags: nvim
+
+- name: Print debug steps for neo vim installation if not successful
+  when: >
+    ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+  ansible.builtin.debug:
+    msg: 
+    - If you are using older linux machine/OS, 
+    - please follow installation instruction here. 
+    - https://github.com/neovim/neovim/wiki/Installing-Neovim
+  tags: nvim
+
+- name: Ensuring Homebrew is installed MacOS
+  stat:
+    path: /usr/local/bin/brew
+  register: nvim_homebrew_exist
+  when: ansible_os_family == "Darwin"
+  tags: nvim
+
+- name: Install homebrew on MacOS
+  shell: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  when: ansible_os_family == "Darwin" and not nvim_homebrew_exist
+  tags: nvim
+
+- name: Install neo vim MacOS 
+  when: ansible_os_family == "Darwin"
+  homebrew:
+    name: neovim
+    state: latest
+    update_homebrew: true
+  tags: nvim
+
+- name: copy dot files
+  copy:
+    src: "../dotfiles/nvim"
+    dest: "$HOME/.config/nvim"
+  tags: nvim

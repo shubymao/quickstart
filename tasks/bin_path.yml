@@ -1,0 +1,17 @@
+- name: Ensure that binary path is created for linux and macOS
+  stat:
+    path: "$HOME/.local/bin/"
+  register: bin_path_exists
+  when: >
+    ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+    or ansible_os_family == "Darwin"
+- name: Create the folder if binary path doesn't exist
+  file:
+    path: "$HOME/.local/bin/"
+    state: directory
+  when: >
+    (ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+    or ansible_os_family == "Darwin")
+    and not bin_path_exists

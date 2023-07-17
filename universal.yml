@@ -4,6 +4,7 @@
     dest_key: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519"
   pre_tasks:
     - include_tasks: tasks/update-repo.yml
+      tags: all
   tasks:
     - include_tasks: tasks/git-setup.yml
       tags: all
@@ -11,4 +12,6 @@
       tags: ssh
     - include_tasks: tasks/zsh.yml
       tags: zsh
+    - include_tasks: tasks/nvim.yml
+      tags: nvim
       
