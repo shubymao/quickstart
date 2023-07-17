@@ -25,9 +25,12 @@
     - dotfiles
     - install
     - ssh
+- name: try print user and item
+  debug: 
+    msg: Adding ssh key to user "{{ ansible_user_id }}"
 - name: Set authorized key took from file
   authorized_key:
-    user: "{{ lookup('env', 'USER') }}"
+    user: "{{ ansible_user_id }}"
     state: present
     key: "{{ lookup('file', item) }}"
   with_fileglob:
