@@ -43,6 +43,25 @@
     dest: "~/.oh-my-zsh/custom/themes/powerlevel10k"
   tags: zsh
 
+- name: Install nerd font
+  file:
+    path: "{{ lookup('env', 'HOME') }}/.fonts"
+    state: directory
+  tags: zsh
+
+- name: Check if font exists
+  shell: "ls {{ lookup('env', 'HOME') }}/.fonts/MesloLGS%20NF%20Regular.ttf"
+  register: menslo_exists
+  ignore_errors: yes
+  tags: zsh
+
+- name: Download font
+  when: menslo_exists is failed
+  ansible.builtin.get_url:
+    url: https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf
+    dest: "{{ lookup('env', 'HOME') }}/.fonts/"
+  tags: zsh
+
 - name: Copy .zshrc, .alias, and .p10k.zsh
   copy:
     src: "{{ item.src }}"
