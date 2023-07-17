@@ -4,6 +4,7 @@
       - libfuse2
   when: ansible_os_family == "Debian" 
   tags: nvim
+  become: true
 - name: install neo vim linux
   get_url:
     url: "https://github.com/neovim/neovim/releases/latest/download/nvim.appimage"
@@ -11,6 +12,7 @@
   when: >
     ansible_os_family == "Debian" 
     or ansible_os_family == "RedHat"
+  become: true
   tags: nvim
 
 - name: Set exectuable permission for nvim app image
@@ -19,7 +21,8 @@
     or ansible_os_family == "RedHat"
   file:
     path: "/usr/local/bin/nvim"
-    mode: "u+x"
+    mode: "755"
+  become: true
   tags: nvim
 
 - name: Print debug steps for neo vim installation if not successful
@@ -56,5 +59,5 @@
 - name: copy dot files
   copy:
     src: "../dotfiles/nvim"
-    dest: "$HOME/.config/nvim"
+    dest: "$HOME/.config/"
   tags: nvim

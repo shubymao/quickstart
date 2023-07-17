@@ -4,12 +4,14 @@
       - zsh
       - curl 
     state: present
+  become: true
   when: ansible_os_family == "Debian"
   tags: zsh
 # TODO add MacOS and Red Hat version here
 
 - name: Change shell to zsh
   shell: chsh -s $(which zsh)
+  become: true
   tags: zsh
 
 - name: Check that the somefile.conf exists
