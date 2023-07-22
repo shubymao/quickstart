@@ -1,0 +1,31 @@
+
+- name: Ensuring Homebrew is installed MacOS
+  when: ansible_os_family == "Darwin"
+  stat:
+    path: /usr/local/bin/brew
+  register: nvim_homebrew_exist
+  tags: yabai
+
+- name: Install yabai MacOS 
+  when: ansible_os_family == "Darwin"
+  homebrew:
+    name: yabai 
+    state: latest
+    update_homebrew: true
+  tags: yabai
+
+- name: Ensure .config directory exists.
+  when: ansible_os_family == "Darwin"
+  file:
+    dest: "~/.config"
+    mode: 0744
+    state: directory
+  tags: yabai
+
+- name: Copy Yabai Folder into local .config
+  when: ansible_os_family == "Darwin"
+  copy: 
+    - src: "../dotfiles/yabai"
+    - dest: "~/config"
+    - mode: 0744 
+  tags: yabai

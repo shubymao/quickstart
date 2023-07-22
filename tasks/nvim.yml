@@ -43,11 +43,6 @@
   when: ansible_os_family == "Darwin"
   tags: nvim
 
-- name: Install homebrew on MacOS
-  shell: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-  when: ansible_os_family == "Darwin" and not nvim_homebrew_exist
-  tags: nvim
-
 - name: Install neo vim MacOS 
   when: ansible_os_family == "Darwin"
   homebrew:

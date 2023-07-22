@@ -1,0 +1,31 @@
+
+- name: Ensuring Homebrew is installed MacOS
+  when: ansible_os_family == "Darwin"
+  stat:
+    path: /usr/local/bin/brew
+  register: nvim_homebrew_exist
+  tags: skhd
+
+- name: Install skhd MacOS 
+  when: ansible_os_family == "Darwin"
+  homebrew:
+    name: skhd 
+    state: latest
+    update_homebrew: true
+  tags: skhd
+
+- name: Ensure .config directory exists.
+  when: ansible_os_family == "Darwin"
+  file:
+    dest: "~/.config"
+    mode: 0744
+    state: directory
+  tags: skhd
+
+- name: Copy skhd Folder into local .config
+  when: ansible_os_family == "Darwin"
+  copy: 
+    - src: "../dotfiles/skhd"
+    - dest: "~/config"
+    - mode: 0744 
+  tags: skhd
