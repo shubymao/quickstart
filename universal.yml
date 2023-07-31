@@ -18,4 +18,7 @@
       tags: zsh
     - include_tasks: tasks/nvim.yml
       tags: nvim
-      
+    - include_tasks: tasks/yabai.yml
+      tags: yabai
+    - include_tasks: tasks/skhd.yml
+      tags: skhd

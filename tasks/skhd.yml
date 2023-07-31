@@ -25,7 +25,12 @@
 - name: Copy skhd Folder into local .config
   when: ansible_os_family == "Darwin"
   copy: 
-    - src: "../dotfiles/skhd"
-    - dest: "~/config"
-    - mode: 0744 
+    src: "../dotfiles/skhd"
+    dest: "~/.config"
+    mode: 0744 
+  tags: skhd
+
+- name: Start skhd service 
+  when: ansible_os_family == "Darwin"
+  command: skhd --start-service
   tags: skhd
