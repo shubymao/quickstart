@@ -7,3 +7,9 @@ To run simply, run
 ```
 ansible-playbook -K --ask-vault-pass universal.yml
 ```
+
+
+To run a particular tag use the -t command. E.g
+```
+ansible-playbook -t nvim universal.yml
+```
