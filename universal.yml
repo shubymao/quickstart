@@ -22,3 +22,6 @@
       tags: yabai
     - include_tasks: tasks/skhd.yml
       tags: skhd
+    - include_tasks: tasks/mac-shortcut.yml
+      tags: 
+        - macos-shortcut

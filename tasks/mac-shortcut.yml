@@ -1,0 +1,18 @@
+# To backup existing shortcut, run
+# cp ~/Library/Preferences/com.apple.symbolichotkeys.plist ~/quickstart/dotfiles/macOS/
+# cp ~/Library/Preferences/.GlobalPreferences.plist ~/quickstart/dotfiles/macOS/
+
+- name: Copy the system shortcut
+  when: ansible_os_family == "Darwin"
+  copy:
+    src: "../dotfiles/macOS/com.apple.symbolichotkeys.plist"
+    dest: "~/Library/Preferences/com.apple.symbolichotkeys.plist"
+  tags:
+    - macos-shortcut 
+- name: Copy the global preferences 
+  when: ansible_os_family == "Darwin"
+  copy:
+    src: "../dotfiles/macOS/.GlobalPreferences.plist"
+    dest: "~/Library/Preferences/.GlobalPreferences.plist"
+  tags:
+    - macos-shortcut 
