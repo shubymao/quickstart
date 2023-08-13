@@ -1,0 +1,38 @@
+- name: Ensure app cache folder exists
+  become: true
+  file:
+    path: "{{ lookup('env', 'HOME') }}/.app_cache/"
+    mode: '777'
+    state: directory
+  when: ansible_os_family == "Debian"
+  tags: obsidian
+- name: Install Obsidian
+  ansible.builtin.get_url:
+    url: https://github.com/obsidianmd/obsidian-releases/releases/download/v1.3.7/Obsidian-1.3.7.AppImage
+    dest: "{{ lookup('env', 'HOME') }}/.app_cache/obsidian.AppImage"
+  when: ansible_os_family == "Debian"
+  tags: obsidian
+- name: extract the obsidian into app image 
+  become: true
+  ansible.builtin.copy: 
+    src: ~/.app_cache/obsidian.AppImage
+    dest: /usr/bin/obsidian.AppImage
+    mode: '755'
+  when: ansible_os_family == "Debian"
+  tags: obsidian
+- name: copy the script into the bin
+  become: true
+  copy: 
+    src: ../dotfiles/obsidian/obsidian.sh
+    dest: /usr/bin/obsidian
+    mode: '755'
+  when: ansible_os_family == "Debian"
+  tags: obsidian
+- name: copy the desktop entry into the file
+  become: true
+  copy: 
+    src: ../dotfiles/obsidian/obsidian.desktop
+    dest: /usr/share/applications/
+    mode: '500'
+  when: ansible_os_family == "Debian"
+  tags: obsidian

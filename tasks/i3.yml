@@ -1,0 +1,22 @@
+- name: Update apt
+  become: true
+  apt:
+    force_apt_get: true
+    update_cache: true
+    state: present
+  when: ansible_os_family == "Debian"
+  tags:
+    - i3
+- name: install i3
+  become: true
+  ansible.builtin.apt:
+    name:
+      - i3
+      - polybar
+      - rofi
+      - arandr
+      - xclip
+      - clipit
+  when: ansible_os_family == "Debian"
+  tags:
+    - i3

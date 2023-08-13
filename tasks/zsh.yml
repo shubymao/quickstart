@@ -50,15 +50,22 @@
   tags: zsh
 
 - name: Check if font exists
-  shell: "ls {{ lookup('env', 'HOME') }}/.fonts/MesloLGS%20NF%20Regular.ttf"
-  register: menslo_exists
+  shell: "ls {{ lookup('env', 'HOME') }}/.fonts/FiraCode*.ttf"
+  register: font_exists
   ignore_errors: yes
   tags: zsh
 
 - name: Download font
-  when: menslo_exists is failed
+  when: font_exists is failed
   ansible.builtin.get_url:
-    url: https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf
+    url: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/FiraCode.zip
+    dest: "{{ lookup('env', 'HOME') }}/.fonts/"
+  tags: zsh
+
+- name: Unzip font 
+  when: font_exists is failed
+  ansible.builtin.unarchive:
+    src: "{{ lookup('env', 'HOME') }}/.fonts/FiraCode.zip"
     dest: "{{ lookup('env', 'HOME') }}/.fonts/"
   tags: zsh
 

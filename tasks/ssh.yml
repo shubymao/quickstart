@@ -4,8 +4,6 @@
     mode: 0700
     state: directory
   tags:
-    - dotfiles
-    - install
     - ssh
 - name: Install ssh key
   copy:
@@ -13,8 +11,6 @@
     dest: "{{ dest_key }}"
     mode: 0600
   tags:
-    - dotfiles
-    - install
     - ssh
 - name: Install ssh key public
   copy:
@@ -22,12 +18,19 @@
     dest: "{{ dest_key }}.pub"
     mode: 0644
   tags:
-    - dotfiles
-    - install
+    - ssh
+- name: Install ssh config
+  copy:
+    src: "../dotfiles/.ssh/config"
+    dest: "~/.ssh/config"
+    mode: 0644
+  tags:
     - ssh
 - name: try print user and item
   debug: 
     msg: Adding ssh key to user "{{ ansible_user_id }}"
+  tags:
+    - ssh
 - name: Set authorized key took from file
   authorized_key:
     user: "{{ ansible_user_id }}"
@@ -35,3 +38,5 @@
     key: "{{ lookup('file', item) }}"
   with_fileglob:
   - "{{ lookup('env', 'HOME') }}/.ssh/*.pub"
+  tags: 
+    - ssh
