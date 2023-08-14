@@ -3,7 +3,7 @@ set $mod Mod4
 
 # Font for window titles. Will also be used by the bar unless a different font
 # is used in the bar {} block below.
-font pango:SauceCodeProNerdFont 14
+font pango:Sauce Code Pro Nerd Font 16
 
 # Start XDG autostart .desktop files using dex. See also
 # https://wiki.archlinux.org/index.php/XDG_Autostart
@@ -157,7 +157,7 @@ bindsym $mod+Shift+c reload
 # restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
 bindsym $mod+Shift+r restart
 # exit i3 (logs you out of your X session)
-bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
+bindsym $mod+Shift+e exec ~/.config/rofi/powermenu/type-4/powermenu.sh
 # resize window (you can also use the mouse for that)
 mode "resize" {
         # These bindings trigger as soon as you enter the resize mode
@@ -217,6 +217,15 @@ exec --no-startup-id xmodmap ~/.Xmodmap
 # Auto Start 
 # # Wallpaper
 # exec_always --no-startup-id xwallpaper --daemon --zoom /home/shubymao/.config/xwallpaper/010.png
+# For transparent background
+exec --no-startup-id compton
+
+# Wallpaper
+exec --no-startup-id feh --bg-scale ~/wallpapers/000.jpg
+
+# Notification setting 
+exec_always --no-startup-id dunst -config ~/.config/dunst/dunstrc 
+
 # Polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh --grayblocks
 # Numlock 
@@ -225,3 +234,4 @@ exec_always --no-startup-id numlockx on
 exec xset r rate 200 40
 # Lock screen setting 
 exec --no-startup-id xautolock -time 5 -locker 'i3lock-fancy -p'
+

@@ -10,34 +10,33 @@
 - name: Add papirus repository
   become: true
   ansible.builtin.apt_repository:
-    repo: 'ppa:papirus/papirus'
+    repo: "{{ item }}"
+  loop:
+    - 'ppa:papirus/papirus'
+    - 'ppa:aslatter/ppa'
   when: ansible_os_family == "Debian"
   tags:
     - i3
-- name: Add required aslatter repository
-  become: true
-  ansible.builtin.apt_repository:
-    repo: 'ppa:aslatter/ppa'
-  when: ansible_os_family == "Debian"
-  tags:
-    - i3
+
 - name: install i3 and related packages
   become: true
   ansible.builtin.apt:
     name:
       - i3 # i3  window manager 
       - polybar # for status bar 
+      - rofi # dmenu alternative 
+      - i3lock-fancy # lockscreen 
+      - alacritty # terminal
+      - compton # transparent background
       - dunst # notification 
       - htop # process status 
       - bat # cat alternative 
       - fzf # terminal auto complete 
       - ripgrep # search 
-      - rofi # dmenu alternative 
       - arandr # video output setting 
       - xclip # clip board 
       - clipit # clip tray icon 
-      - i3lock-fancy # lockscreen 
-      - xwallpaper # wall paper 
+      - feh # wall paper 
       - flameshot # screen shot 
       - xautolock # better lock screen
       - numlockx # numlock support 
@@ -45,16 +44,20 @@
       - lxappearance # tool for setting themes gdk 
       - gnome-tweaks # tool for setting themes for gnome 
       - arc-theme # themes 
-      - alacritty # terminal
-      - compton # transparent background
   when: ansible_os_family == "Debian"
   tags:
     - i3
+
 - name: Copy i3 config into the config folder
   copy: 
-    src: "../dotfiles/i3"
+    src: "{{ item }}"
     dest: "{{ lookup('env', 'HOME') }}/.config/"
     mode: 777
+  loop: 
+    - "../dotfiles/i3"
+    - "../dotfiles/polybar"
+    - "../dotfiles/rofi"
+    - "../dotfiles/alacritty"
   when: ansible_os_family == "Debian"
   tags:
     - i3
