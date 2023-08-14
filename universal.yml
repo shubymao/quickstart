@@ -6,14 +6,14 @@
     - include_tasks: tasks/update-repo.yml
       tags: all
   tasks:
+    - include_tasks: tasks/font.yml
+      tags: font
     - include_tasks: tasks/git-setup.yml
       tags: all
     - include_tasks: tasks/ssh.yml
       tags: ssh
     - include_tasks: tasks/npm.yml
-      tags: 
-        - nvm
-        - npm
+      tags: npm
     - include_tasks: tasks/zsh.yml
       tags: zsh
     - include_tasks: tasks/nvim.yml
@@ -23,11 +23,8 @@
     - include_tasks: tasks/skhd.yml
       tags: skhd
     - include_tasks: tasks/mac-shortcut.yml
-      tags: 
-        - macos-shortcut
+      tags: macos-shortcut
     - include_tasks: tasks/i3.yml
-      tags:
-        - i3
+      tags: i3
     - include_tasks: tasks/obsidian.yml
-      tags:
-        - obsidian
+      tags: obsidian

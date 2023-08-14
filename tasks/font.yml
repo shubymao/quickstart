@@ -1,0 +1,25 @@
+- name: Install nerd font
+  file:
+    path: "{{ lookup('env', 'HOME') }}/.fonts"
+    state: directory
+  tags: font
+
+- name: Check if font exists
+  shell: "ls {{ lookup('env', 'HOME') }}/.fonts/SourceCodePro*.ttf"
+  register: font_exists
+  ignore_errors: yes
+  tags: font
+
+- name: Download font
+  when: font_exists is failed
+  ansible.builtin.get_url:
+    url: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/SourceCodePro.zip
+    dest: "{{ lookup('env', 'HOME') }}/.fonts/"
+  tags: font
+
+- name: Unzip font 
+  when: font_exists is failed
+  ansible.builtin.unarchive:
+    src: "{{ lookup('env', 'HOME') }}/.fonts/SourceCodePro.zip"
+    dest: "{{ lookup('env', 'HOME') }}/.fonts/"
+  tags: font
