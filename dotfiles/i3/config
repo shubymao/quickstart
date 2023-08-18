@@ -1,5 +1,5 @@
 # Windows Key As the Mode Key 
-set $mod Mod4 
+set $mod Mod1 
 
 # Font for window titles. Will also be used by the bar unless a different font
 # is used in the bar {} block below.
@@ -185,9 +185,6 @@ mode "resize" {
 
 bindsym $mod+r mode "resize"
 
-# Open Setting 
-bindsym $mod+p exec "gnome-control-center"
-
 # Floating Window List
 for_window [class="control-center"] floating enable
 
@@ -196,8 +193,8 @@ for_window [class="control-center"] floating enable
 exec_always xrandr --output $display_right --mode 2560x1440 --pos 2560x0 --rotate normal --output $display_left --mode 2560x1440 --pos 0x0 --rotate normal
 
 # Remap cap lock as window key 
-exec --no-startup-id xmodmap -layout us
-exec --no-startup-id xmodmap ~/.Xmodmap
+exec --no-startup-id setxkbmap -layout us
+exec --no-startup-id setxkbmap "caps:super"
 
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
@@ -205,16 +202,11 @@ exec --no-startup-id xmodmap ~/.Xmodmap
 #     status_command i3blocks
 #     tray_output primary
 # }
-# bar {
-#     status_command          i3blocks
-#     position                bottom
-#     tray_output             primary
-#     separator_symbol        " "
-#     workspace_buttons       yes
-#     strip_workspace_numbers yes
-# } 
-
 # Auto Start 
+exec --no-startup-id firefox
+exec --no-startup-id i3-sensible-terminal
+exec --no-startup-id files
+exec --no-startup-id obsidian
 # # Wallpaper
 # exec_always --no-startup-id xwallpaper --daemon --zoom /home/shubymao/.config/xwallpaper/010.png
 # For transparent background
@@ -231,7 +223,7 @@ exec_always --no-startup-id $HOME/.config/polybar/launch.sh --grayblocks
 # Numlock 
 exec_always --no-startup-id numlockx on
 # Refresh Rate Cap
-exec xset r rate 200 40
+exec xset r rate 300 40
 # Lock screen setting 
-exec --no-startup-id xautolock -time 5 -locker 'i3lock-fancy -p'
+exec --no-startup-id xautolock -time 5 -detectsleep -corners '++--' -cornerdelay 5 -locker 'i3lock-fancy -p'
 

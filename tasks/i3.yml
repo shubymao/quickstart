@@ -37,6 +37,7 @@
       - xclip # clip board 
       - clipit # clip tray icon 
       - feh # wall paper 
+      - xcape # remap caplock to escape
       - flameshot # screen shot 
       - xautolock # better lock screen
       - numlockx # numlock support 
