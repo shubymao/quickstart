@@ -192,8 +192,6 @@ for_window [class="control-center"] floating enable
 # To List the Port, run xrandr -q
 exec_always xrandr --output $display_right --mode 2560x1440 --pos 2560x0 --rotate normal --output $display_left --mode 2560x1440 --pos 0x0 --rotate normal
 
-# Remap cap lock as window key 
-exec_always --no-startup-id bash ~/keymap.sh
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
 # bar {
@@ -221,7 +219,9 @@ exec_always --no-startup-id $HOME/.config/polybar/launch.sh --grayblocks
 # Numlock 
 exec_always --no-startup-id numlockx on
 # Refresh Rate Cap
-exec xset r rate 300 40
+exec --no-startup-id xset r rate 300 40
 # Lock screen setting 
-exec --no-startup-id xautolock -time 5 -detectsleep -corners '++--' -cornerdelay 5 -locker 'i3lock-fancy -p'
+exec --no-startup-id xautolock -time 30 -detectsleep -corners '++--' -cornerdelay 5 -locker 'i3lock-fancy -p'
 
+# Apply key maps
+exec_always --no-startup-id $HOME/keymap.sh

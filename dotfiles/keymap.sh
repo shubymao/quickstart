@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-
+pkill -9 xcape
 setxkbmap -layout us
 setxkbmap -option ctrl:nocaps
 xcape -e 'Control_L=Escape'
