@@ -113,7 +113,7 @@ set $ws10 "10"
 
 assign [class="(Gnome-terminal|Alacritty)"] $ws1
 assign [class="obsidian"] $ws2
-assign [class="org.gnome.Nautilus"] $ws3
+assign [class="(files|Nautilus)"] $ws3
 assign [class="firefox"] $ws6
 # switch to workspace
 bindsym $mod+1 workspace number $ws1
@@ -193,9 +193,7 @@ for_window [class="control-center"] floating enable
 exec_always xrandr --output $display_right --mode 2560x1440 --pos 2560x0 --rotate normal --output $display_left --mode 2560x1440 --pos 0x0 --rotate normal
 
 # Remap cap lock as window key 
-exec --no-startup-id setxkbmap -layout us
-exec --no-startup-id setxkbmap "caps:super"
-
+exec_always --no-startup-id bash ~/keymap.sh
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
 # bar {

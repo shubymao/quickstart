@@ -53,12 +53,22 @@
   copy: 
     src: "{{ item }}"
     dest: "{{ lookup('env', 'HOME') }}/.config/"
-    mode: 777
+    mode: 700
   loop: 
     - "../dotfiles/i3"
     - "../dotfiles/polybar"
     - "../dotfiles/rofi"
     - "../dotfiles/alacritty"
+  when: ansible_os_family == "Debian"
+  tags:
+    - i3
+- name: Copy i3 keymap into the root folder
+  copy: 
+    src: "{{ item }}"
+    dest: "{{ lookup('env', 'HOME') }}/"
+    mode: 700
+  loop: 
+    - "../dotfiles/keymap.sh"
   when: ansible_os_family == "Debian"
   tags:
     - i3

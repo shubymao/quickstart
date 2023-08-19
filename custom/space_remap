@@ -1,0 +1,22 @@
+partial modifier_keys
+xkb_types "SPACE_ALT" {
+    type "SPACE_ALT" {
+        modifiers = Shift+Lock+Control+Alt;
+        map[None] = Level1;
+        map[Shift] = Level2;
+        map[Lock] = Level2;
+        map[Shift+Lock] = Level2;
+        map[Control] = Level3;
+        map[Control+Shift] = Level4;
+        map[Control+Alt] = Level5;
+        map[Control+Alt+Shift] = Level6;
+        map[Alt] = Level7;
+        map[Alt+Shift] = Level8;
+    };
+
+    key <SPCE> {
+        type="SPACE_ALT",
+        symbols[Group1]= [ space, Alt_L ]
+    };
+};
+
