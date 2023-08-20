@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 pkill -9 xcape
 setxkbmap -layout us
 setxkbmap -option ctrl:nocaps
