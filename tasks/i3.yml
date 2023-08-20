@@ -45,6 +45,7 @@
       - lxappearance # tool for setting themes gdk 
       - gnome-tweaks # tool for setting themes for gnome 
       - arc-theme # themes 
+      - policykit-1-gnome
   when: ansible_os_family == "Debian"
   tags:
     - i3

@@ -187,6 +187,7 @@ bindsym $mod+r mode "resize"
 bindsym $mod+s exec flameshot gui 
 # Floating Window List
 for_window [class="control-center"] floating enable
+for_window [class="calculator"] floating enable
 
 # Set The Display Property
 # To List the Port, run xrandr -q
@@ -215,7 +216,7 @@ exec --no-startup-id feh --bg-scale ~/wallpapers/000.jpg
 exec_always --no-startup-id dunst -config ~/.config/dunst/dunstrc 
 
 # Polybar
-exec_always --no-startup-id $HOME/.config/polybar/launch.sh --grayblocks
+exec_always --no-startup-id sleep 1 && $HOME/.config/polybar/launch.sh --grayblocks
 # Numlock 
 exec_always --no-startup-id numlockx on
 # Refresh Rate Cap
@@ -223,7 +224,9 @@ exec --no-startup-id xset r rate 300 40
 # Lock screen setting 
 exec --no-startup-id xautolock -time 30 -detectsleep -corners '++--' -cornerdelay 5 -locker 'i3lock-fancy -p'
 
-# Apply key maps
-exec_always --no-startup-id $HOME/keymap.sh
+# allow password prompt when gnome app requires it
+exec /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
 
+# Apply key maps
+exec_always --no-startup-id $HOME/keymap.sh &> $HOME/keymaplog.txt
 
