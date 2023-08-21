@@ -126,6 +126,9 @@ source $ZSH/oh-my-zsh.sh
 # Aliases
 . ~/.aliases
 
+# Local .zshrc
+. ~/.zshrc.local
+
 export EDITOR=/usr/bin/nvim
 export VISUAL=/usr/bin/nvim
 
