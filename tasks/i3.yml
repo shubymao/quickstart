@@ -46,6 +46,7 @@
       - gnome-tweaks # tool for setting themes for gnome 
       - arc-theme # themes 
       - policykit-1-gnome
+      - ibus-chewing
   when: ansible_os_family == "Debian"
   tags:
     - i3
