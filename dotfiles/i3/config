@@ -17,7 +17,7 @@ exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
 # and nm-applet is a desktop environment-independent system tray GUI for it.
 exec --no-startup-id nm-applet
 
-# Use pactl to adjust volume in PulseAudio.
+# Audio Settings
 set $refresh_i3status killall -SIGUSR1 i3status
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5% && $refresh_i3status
 bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5% && $refresh_i3status
@@ -27,21 +27,24 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 # Use Mouse+$mod to drag floating windows to their wanted position
 floating_modifier $mod
 
-# start a terminal
+
+# Basic Shortcuts ------------------------------------------------------------
+# Terminal
 bindsym $mod+Return exec i3-sensible-terminal
 
-# kill focused window
-bindsym $mod+q kill
+# Kill focused window
+bindsym $mod+Shift+q kill
 
-# start dmenu (a program launcher)
-# bindsym $mod+d exec --no-startup-id dmenu_run
+# Screenshot
+bindsym $mod+s exec flameshot gui 
+
+# Rofi dmenu
 bindsym $mod+d exec ~/.config/rofi/launchers/type-2/launcher.sh
-# A more modern dmenu replacement is rofi:
-# bindcode $mod+40 exec "rofi -modi drun,run -show drun"
-# There also is i3-dmenu-desktop which only displays applications shipping a
-# .desktop file. It is a wrapper around dmenu, so you need that installed.
-# bindcode $mod+40 exec --no-startup-id i3-dmenu-desktop
 
+# Power Menu
+bindsym $mod+Shift+e exec ~/.config/rofi/powermenu/type-4/powermenu.sh
+
+# Window Management Shortcuts ------------------------------------------------
 # change focus
 bindsym $mod+h focus left
 bindsym $mod+j focus down
@@ -72,20 +75,20 @@ bindsym $mod+Shift+Right move right
 # split in vertical orientation
 # bindsym $mod+v split v
 
-# enter fullscreen mode for the focused container
-bindsym $mod+f fullscreen toggle
+# enter fullscreen mode for the focused container not mod + m because alt m 
+# is mute in many calling apps
+bindsym $mod+Shift+m fullscreen toggle
 
 # change container layout (stacked, tabbed, toggle split)
 # bindsym $mod+s layout stacking
-bindsym $mod+w layout tabbed
-bindsym $mod+e layout toggle split
+# bindsym $mod+w layout tabbed
+# bindsym $mod+e layout toggle split
 
 # toggle tiling / floating
 bindsym $mod+Shift+space floating toggle
 
 # change focus between tiling / floating windows
 bindsym $mod+space focus mode_toggle
-
 # focus the parent container
 bindsym $mod+a focus parent
 
@@ -95,6 +98,7 @@ bindsym $mod+a focus parent
 # Define names for default workspaces for which we configure key bindings later on.
 # We use variables to avoid repeating the names in multiple places.
 
+# Workspace Settings
 # To List the Port, run xrandr -q
 set $display_left "HDMI-A-0"
 set $display_right "DisplayPort-2"
@@ -110,12 +114,12 @@ set $ws9 "9"
 set $ws10 "10"
 
 # Set A list of app to only certain workspace 
-
 assign [class="(Gnome-terminal|Alacritty)"] $ws1
 assign [class="obsidian"] $ws2
 assign [class="(files|Nautilus)"] $ws3
 assign [class="firefox"] $ws6
-# switch to workspace
+
+# Switch to workspace Shortcuts
 bindsym $mod+1 workspace number $ws1
 bindsym $mod+2 workspace number $ws2
 bindsym $mod+3 workspace number $ws3
@@ -127,7 +131,7 @@ bindsym $mod+8 workspace number $ws8
 bindsym $mod+9 workspace number $ws9
 bindsym $mod+0 workspace number $ws10
 
-# move focused container to workspace
+# Move focused container to workspace
 bindsym $mod+Shift+1 move container to workspace number $ws1
 bindsym $mod+Shift+2 move container to workspace number $ws2
 bindsym $mod+Shift+3 move container to workspace number $ws3
@@ -156,77 +160,60 @@ workspace $ws10 output $display_right
 bindsym $mod+Shift+c reload
 # restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
 bindsym $mod+Shift+r restart
-# exit i3 (logs you out of your X session)
-bindsym $mod+Shift+e exec ~/.config/rofi/powermenu/type-4/powermenu.sh
+
+# Resize Mode -----------------------------------------------------------------
 # resize window (you can also use the mouse for that)
+bindsym $mod+r mode "resize"
+
 mode "resize" {
-        # These bindings trigger as soon as you enter the resize mode
+    # These bindings trigger as soon as you enter the resize mode
 
-        # Pressing left will shrink the window’s width.
-        # Pressing right will grow the window’s width.
-        # Pressing up will shrink the window’s height.
-        # Pressing down will grow the window’s height.
-        bindsym h resize shrink width 10 px or 10 ppt
-        bindsym j resize grow height 10 px or 10 ppt
-        bindsym k resize shrink height 10 px or 10 ppt
-        bindsym l resize grow width 10 px or 10 ppt
+    # Pressing left will shrink the window’s width.
+    # Pressing right will grow the window’s width.
+    # Pressing up will shrink the window’s height.
+    # Pressing down will grow the window’s height.
+    bindsym h resize shrink width 10 px or 10 ppt
+    bindsym j resize grow height 10 px or 10 ppt
+    bindsym k resize shrink height 10 px or 10 ppt
+    bindsym l resize grow width 10 px or 10 ppt
 
-        # same bindings, but for the arrow keys
-        bindsym Left resize shrink width 10 px or 10 ppt
-        bindsym Down resize grow height 10 px or 10 ppt
-        bindsym Up resize shrink height 10 px or 10 ppt
-        bindsym Right resize grow width 10 px or 10 ppt
+    # same bindings, but for the arrow keys
+    bindsym Left resize shrink width 10 px or 10 ppt
+    bindsym Down resize grow height 10 px or 10 ppt
+    bindsym Up resize shrink height 10 px or 10 ppt
+    bindsym Right resize grow width 10 px or 10 ppt
 
-        # back to normal: Enter or Escape or $mod+r
-        bindsym Return mode "default"
-        bindsym Escape mode "default"
-        bindsym $mod+r mode "default"
+    # back to normal: Enter or Escape or $mod+r
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+    bindsym $mod+r mode "default"
 }
 
-bindsym $mod+r mode "resize"
-bindsym $mod+s exec flameshot gui 
 # Floating Window List
 for_window [class="control-center"] floating enable
 for_window [class="calculator"] floating enable
-
-# Set The Display Property
+for_window [window_type="normal"] border normal 
+# Display Property
 # To List the Port, run xrandr -q
-exec_always xrandr --output $display_right --mode 2560x1440 --pos 2560x0 --rotate normal --output $display_left --mode 2560x1440 --pos 0x0 --rotate normal
+# exec_always xrandr --output $display_right --mode 2560x1440 --pos 2560x0 --rotate normal --output $display_left --mode 2560x1440 --pos 0x0 --rotate normal
 
-# Start i3bar to display a workspace bar (plus the system information i3status
-# finds out, if available)
-# bar {
-#     status_command i3blocks
-#     tray_output primary
-# }
-# Auto Start 
+# Auto Start ----------------------------------------------------------------- 
 exec --no-startup-id firefox
 exec --no-startup-id i3-sensible-terminal
 exec --no-startup-id files
 exec --no-startup-id obsidian
-# # Wallpaper
-# exec_always --no-startup-id xwallpaper --daemon --zoom /home/shubymao/.config/xwallpaper/010.png
+
+# UX Level Settings ----------------------------------------------------------
+# Polybar
+exec_always --no-startup-id sleep 1 && $HOME/.config/polybar/launch.sh --grayblocks
 # For transparent background
 exec --no-startup-id compton
 
-# Wallpaper
-exec --no-startup-id feh --bg-scale ~/wallpapers/000.jpg
-
-# Notification setting 
-exec_always --no-startup-id dunst -config ~/.config/dunst/dunstrc 
-
-# Polybar
-exec_always --no-startup-id sleep 1 && $HOME/.config/polybar/launch.sh --grayblocks
+# Keyboard configurations ----------------------------------------------------
 # Numlock 
 exec_always --no-startup-id numlockx on
-# Refresh Rate Cap
+# Repeat Rate Setting
 exec --no-startup-id xset r rate 300 40
-# Lock screen setting 
-exec --no-startup-id xautolock -time 30 -detectsleep -corners '++--' -cornerdelay 5 -locker 'i3lock-fancy -p'
-
-# allow password prompt when gnome app requires it
-exec /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
-
 # Apply key maps
 exec_always --no-startup-id $HOME/keymap.sh &> $HOME/keymaplog.txt
 

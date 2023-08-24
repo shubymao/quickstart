@@ -7,7 +7,9 @@
       tags: all
   tasks:
     - include_tasks: tasks/font.yml
-      tags: font
+      tags: 
+        - font 
+        - fonts
     - include_tasks: tasks/git-setup.yml
       tags: all
     - include_tasks: tasks/ssh.yml

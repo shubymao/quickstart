@@ -7,17 +7,15 @@
   when: ansible_os_family == "Debian"
   tags:
     - i3
-- name: Add papirus repository
+- name: add required repository
   become: true
   ansible.builtin.apt_repository:
     repo: "{{ item }}"
   loop:
-    - 'ppa:papirus/papirus'
-    - 'ppa:aslatter/ppa'
+    - 'ppa:aslatter/ppa' # for alacritty
   when: ansible_os_family == "Debian"
   tags:
     - i3
-
 - name: install i3 and related packages
   become: true
   ansible.builtin.apt:
@@ -25,10 +23,7 @@
       - i3 # i3  window manager 
       - polybar # for status bar 
       - rofi # dmenu alternative 
-      - i3lock-fancy # lockscreen 
       - alacritty # terminal
-      - compton # transparent background
-      - dunst # notification 
       - htop # process status 
       - bat # cat alternative 
       - fzf # terminal auto complete 
@@ -36,26 +31,16 @@
       - arandr # video output setting 
       - xclip # clip board 
       - clipit # clip tray icon 
-      - feh # wall paper 
       - xcape # remap caplock to escape
       - flameshot # screen shot 
-      - xautolock # better lock screen
-      - numlockx # numlock support 
-      - papirus-icon-theme # icon theme for file explorer
-      - lxappearance # tool for setting themes gdk 
-      - gnome-tweaks # tool for setting themes for gnome 
-      - arc-theme # themes 
-      - policykit-1-gnome
-      - ibus-chewing
   when: ansible_os_family == "Debian"
   tags:
     - i3
-
 - name: Copy i3 config into the config folder
   copy: 
     src: "{{ item }}"
     dest: "{{ lookup('env', 'HOME') }}/.config/"
-    mode: 700
+
   loop: 
     - "../dotfiles/i3"
     - "../dotfiles/polybar"
@@ -68,9 +53,32 @@
   copy: 
     src: "{{ item }}"
     dest: "{{ lookup('env', 'HOME') }}/"
-    mode: 700
+    mode: "u=rwx,g=rx,o=rx"
   loop: 
     - "../dotfiles/keymap.sh"
   when: ansible_os_family == "Debian"
+  tags:
+    - i3
+- name: Ensure poly bar, rofi launcher and keymap script are executable
+  file: 
+    dest: "{{ item }}"
+    "mode": "u=rwx,g=rx,o=rx"
+
+  loop:
+    - "{{ lookup('env', 'HOME') }}/.config/rofi/launchers/type-2/launcher.sh"
+    - "~/.config/rofi/powermenu/type-4/powermenu.sh"
+    - "~/.config/polybar/launch.sh"
+    - "~/.config/polybar/grayblocks/launch.sh"
+    - "~/.config/polybar/grayblocks/preview.sh"
+    - "~/keymap.sh"
+  tags:
+    - i3
+- name: Ensure poly bar, rofi launcher and keymap script are executable
+  file: 
+    dest: "{{ item }}"
+    "recurse": true
+    "mode": "u=rwx,g=rx,o=rx"
+  loop:
+    - "~/.config/polybar/grayblocks/scripts"
   tags:
     - i3

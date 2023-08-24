@@ -2,24 +2,25 @@
   file:
     path: "{{ lookup('env', 'HOME') }}/.fonts"
     state: directory
-  tags: font
+  tags: 
+    - font
+    - fonts 
 
 - name: Check if font exists
-  shell: "ls {{ lookup('env', 'HOME') }}/.fonts/SourceCodePro*.ttf"
+  shell: "ls {{ lookup('env', 'HOME') }}/.fonts/SauceCodeProNerdFont-Regular.ttf"
   register: font_exists
   ignore_errors: yes
-  tags: font
+  tags: 
+    - font 
+    - fonts 
 
-- name: Download font
+- name: Copy font
   when: font_exists is failed
-  ansible.builtin.get_url:
-    url: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/SourceCodePro.zip
-    dest: "{{ lookup('env', 'HOME') }}/.fonts/"
-  tags: font
+  copy:
+    src: "../fonts/"
+    dest: "{{ lookup('env', 'HOME') }}/.fonts"
+    mode: 0700
+  tags: 
+    - font 
+    - fonts 
 
-- name: Unzip font 
-  when: font_exists is failed
-  ansible.builtin.unarchive:
-    src: "{{ lookup('env', 'HOME') }}/.fonts/SourceCodePro.zip"
-    dest: "{{ lookup('env', 'HOME') }}/.fonts/"
-  tags: font
