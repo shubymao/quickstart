@@ -33,6 +33,7 @@
       - clipit # clip tray icon 
       - xcape # remap caplock to escape
       - flameshot # screen shot 
+      - compton # transparent background support
   when: ansible_os_family == "Debian"
   tags:
     - i3
