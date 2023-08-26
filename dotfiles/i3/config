@@ -100,8 +100,8 @@ bindsym $mod+a focus parent
 
 # Workspace Settings
 # To List the Port, run xrandr -q
-# set $display_left "HDMI-A-0"
-# set $display_right "DisplayPort-2"
+set $display_left "HDMI-A-0"
+set $display_right "DisplayPort-2"
 
 # exec_always xrandr --output $display_right --mode 2560x1440 --scale 1.6x1.6 --output $display_left --mode 2560x1440 --scale 1.6x1.6
 # exec_always xrandr --output $display_left --auto --scale 1.6x1.6
