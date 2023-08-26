@@ -30,3 +30,7 @@
       tags: i3
     - include_tasks: tasks/obsidian.yml
       tags: obsidian
+    - include_tasks: tasks/cli.yml
+      tags: cli
+    - include_tasks: tasks/terminal.yml
+      tags: terminal
