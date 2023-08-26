@@ -11,7 +11,7 @@
         - font 
         - fonts
     - include_tasks: tasks/git-setup.yml
-      tags: all
+      tags: git
     - include_tasks: tasks/ssh.yml
       tags: ssh
     - include_tasks: tasks/npm.yml
