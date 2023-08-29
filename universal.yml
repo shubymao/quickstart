@@ -30,3 +30,5 @@
       tags: i3
     - include_tasks: tasks/obsidian.yml
       tags: obsidian
+    - include_tasks: tasks/karabiner-elements.yml
+      tags: karabiner

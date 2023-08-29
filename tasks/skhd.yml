@@ -9,7 +9,7 @@
 - name: Install skhd MacOS 
   when: ansible_os_family == "Darwin"
   homebrew:
-    name: skhd 
+    name: koekeishiya/formulae/yabai 
     state: latest
     update_homebrew: true
   tags: skhd
