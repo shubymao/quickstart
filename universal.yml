@@ -11,7 +11,7 @@
         - font 
         - fonts
     - include_tasks: tasks/git-setup.yml
-      tags: all
+      tags: git
     - include_tasks: tasks/ssh.yml
       tags: ssh
     - include_tasks: tasks/npm.yml
@@ -32,3 +32,7 @@
       tags: obsidian
     - include_tasks: tasks/karabiner-elements.yml
       tags: karabiner
+    - include_tasks: tasks/cli.yml
+      tags: cli
+    - include_tasks: tasks/terminal.yml
+      tags: terminal

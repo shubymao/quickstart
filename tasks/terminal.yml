@@ -1,0 +1,37 @@
+- name: Update apt
+  become: true
+  apt:
+    force_apt_get: true
+    update_cache: true
+    state: present
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+- name: add required repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "{{ item }}"
+  loop:
+    - 'ppa:aslatter/ppa' # for alacritty
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+- name: install terminal and related packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - alacritty # terminal
+      # - compton # transparent background support
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+- name: Copy config into the config folder
+  copy: 
+    src: "{{ item }}"
+    dest: "{{ lookup('env', 'HOME') }}/.config/"
+
+  loop: 
+    - "../dotfiles/alacritty"
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal

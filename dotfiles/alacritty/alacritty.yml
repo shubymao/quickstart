@@ -20,8 +20,11 @@ window:
   dynamic_title: true
 
 scrolling:
-  history: 7000
+  history: 8000
   multiplier: 3
+
+shell:
+  program: /bin/zsh
 
 font:
   normal:
