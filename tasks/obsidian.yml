@@ -1,22 +1,23 @@
 - name: Ensure app cache folder exists
+  when: ansible_os_family == "Debian"
   become: true
   file:
     path: "{{ lookup('env', 'HOME') }}/.app_cache/"
     mode: '777'
     state: directory
-  when: ansible_os_family == "Debian"
   tags: obsidian
 - name: Update apt
+  when: ansible_os_family == "Debian"
   become: true
   apt:
     force_apt_get: true
     update_cache: true
     state: present
-  when: ansible_os_family == "Debian"
   tags:
     - obsidian
 - name: install i3 and related packages
   become: true
+  when: ansible_os_family == "Debian"
   ansible.builtin.apt:
     name:
       - ssh-askpass
@@ -67,4 +68,17 @@
     dest: /usr/share/applications/
     mode: '777'
   when: ansible_os_family == "Debian"
+  tags: obsidian
+- name: Ensuring Homebrew is installed MacOS
+  when: ansible_os_family == "Darwin"
+  stat:
+    path: /usr/local/bin/brew
+  register: homebrew_exist
+  tags: obsidian
+- name: Install obsidian MacOS 
+  when: (ansible_os_family == "Darwin") and homebrew_exist
+  homebrew:
+    name: obsidian
+    state: latest
+    update_homebrew: true
   tags: obsidian
