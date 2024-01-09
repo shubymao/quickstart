@@ -31,4 +31,4 @@
 - name: Start yabai services 
   when: ansible_os_family == "Darwin"
   command: yabai --start-service
-  tags: yabai  
+  tags: yabai

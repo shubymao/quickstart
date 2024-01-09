@@ -53,3 +53,10 @@
     - src: "../dotfiles/.p10k.zsh"
     - src: "../dotfiles/.aliases"
   tags: zsh
+- name: copy custom zsh for MacOS
+  when: ansible_os_family == "Darwin"
+  copy:
+    src: "../dotfiles/macOS/.zshrc.local"
+    dest: "~/"
+    mode: "0644"
+  tags: zsh

@@ -9,11 +9,10 @@
 - name: Install skhd MacOS 
   when: ansible_os_family == "Darwin"
   homebrew:
-    name: koekeishiya/formulae/yabai 
+    name: koekeishiya/formulae/skhd
     state: latest
     update_homebrew: true
   tags: skhd
-
 - name: Ensure .config directory exists.
   when: ansible_os_family == "Darwin"
   file:
@@ -32,5 +31,7 @@
 
 - name: Start skhd service 
   when: ansible_os_family == "Darwin"
+  environment: 
+    PATH: "/usr/other/bin:{{ ansible_env.PATH }}"
   command: skhd --start-service
   tags: skhd

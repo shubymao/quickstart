@@ -35,3 +35,12 @@
   when: ansible_os_family == "Debian"
   tags:
     - terminal
+ 
+- name: Install iterm2 MacOS 
+  when: ansible_os_family == "Darwin"
+  homebrew:
+    name: iterm2
+    state: latest
+    update_homebrew: true
+  tags: terminal
+

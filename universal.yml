@@ -36,3 +36,5 @@
       tags: cli
     - include_tasks: tasks/terminal.yml
       tags: terminal
+    - include_tasks: tasks/browser.yml
+      tags: browser

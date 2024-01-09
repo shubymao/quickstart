@@ -1,0 +1,9 @@
+- name: Install firefox on macOS
+  when: ansible_os_family == "Darwin"
+  homebrew:
+    name: firefox
+    state: latest
+    update_homebrew: true
+  tags: 
+    - browser
+    - firefox

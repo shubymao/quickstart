@@ -9,5 +9,12 @@ else
   echo "Home brew installed, continue to next step"
 fi
 
+export PATH=$PATH:/opt/homebrew/bin
+
 echo "Installing ansible from home brew by running brew install ansible"
 brew install ansible
+
+export PATH=$PATH:/opt/homebrew/bin
+
+echo "running initialization script"
+ansible-playbook -K --ask-vault-pass universal.yml

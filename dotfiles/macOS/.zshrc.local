@@ -1,0 +1,4 @@
+
+
+# Brew Path
+export PATH=/opt/homebrew/bin:$PATH
