@@ -27,9 +27,12 @@ yabai -m config mouse_action2 resize
 yabai -m mouse_drop_action swap
 
 # disable specific apps
+# to find what app is currently running 
+# run yabai -m query --windows
 yabai -m rule --add app="^System Settings$" manage=off
 yabai -m rule --add app="^Calculator$" manage=off
 yabai -m rule --add app="^Workplace Chat$" title!="(Workplace Chat|Workplace Call)" manage=off
+yabai -m rule --add app="^Finder$" manage=off
 yabai -m rule --add title="^Zoom$" manage=off
 yabai -m rule --add title="Zoom Meeting" space=9
 yabai -m rule --add title="Workplace Call" space=9
