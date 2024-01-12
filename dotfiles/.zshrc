@@ -125,7 +125,7 @@ source $ZSH/oh-my-zsh.sh
 
 # Key binding
 bindkey '^ ' autosuggest-accept
-
+bindkey '^y' autosuggest-accept
 # Aliases
 . ~/.aliases
 
