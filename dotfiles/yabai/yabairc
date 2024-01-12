@@ -34,6 +34,7 @@ yabai -m rule --add app="^Calculator$" manage=off
 yabai -m rule --add app="^Workplace Chat$" title!="(Workplace Chat|Workplace Call)" manage=off
 yabai -m rule --add app="^Finder$" manage=off
 yabai -m rule --add title="^Zoom$" manage=off
+yabai -m rule --add app="^WireGuard$" manage=off
 yabai -m rule --add title="Zoom Meeting" space=9
 yabai -m rule --add title="Workplace Call" space=9
 # yabai -m rule --add app="^Karabiner-Elements$" manage=off
