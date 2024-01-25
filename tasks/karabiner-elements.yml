@@ -7,9 +7,16 @@
 
 - name: Install karabiner-elements MacOS 
   when: ansible_os_family == "Darwin"
-  homebrew:
+  homebrew_cask:
     name: karabiner-elements
     state: latest
     update_homebrew: true
   tags: karabiner
 
+- name: Install karabiner-elements Config MacOs 
+  when: ansible_os_family == "Darwin"
+  copy:
+    src: "../dotfiles/karabiner"
+    dest: "~/.config/"
+    mode: "0644"
+  tags: karabiner
