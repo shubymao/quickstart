@@ -59,6 +59,7 @@
   file: 
     dest: "{{ item }}"
     "mode": "u=rwx,g=rx,o=rx"
+  when: ansible_os_family == "Debian"
 
   loop:
     - "{{ lookup('env', 'HOME') }}/.config/rofi/launchers/type-2/launcher.sh"
@@ -74,6 +75,7 @@
     dest: "{{ item }}"
     "recurse": true
     "mode": "u=rwx,g=rx,o=rx"
+  when: ansible_os_family == "Debian"
   loop:
     - "~/.config/polybar/grayblocks/scripts"
   tags:

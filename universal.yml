@@ -24,8 +24,6 @@
       tags: yabai
     - include_tasks: tasks/skhd.yml
       tags: skhd
-    - include_tasks: tasks/mac-shortcut.yml
-      tags: macos-shortcut
     - include_tasks: tasks/i3.yml
       tags: i3
     - include_tasks: tasks/obsidian.yml

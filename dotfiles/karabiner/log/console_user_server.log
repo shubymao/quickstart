@@ -1,0 +1,36 @@
+[2024-05-08 20:46:29.980] [info] [console_user_server] version 14.13.0
+[2024-05-08 20:46:30.079] [info] [console_user_server] on_console_changed: on_console:true
+[2024-05-08 20:46:30.079] [info] [console_user_server] grabber_client is started.
+[2024-05-08 20:46:30.079] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:31.109] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:32.159] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:33.233] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:34.256] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:35.321] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:36.365] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:37.374] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:38.452] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:39.527] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:40.548] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:41.622] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:42.671] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:43.746] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:44.820] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:45.897] [error] [console_user_server] grabber_client connect_failed: No such file or directory
+[2024-05-08 20:46:46.973] [info] [console_user_server] grabber_client is connected.
+[2024-05-08 20:46:47.138] [info] [console_user_server] Load /Users/shubymao/.config/karabiner/karabiner.json...
+[2024-05-08 20:46:47.138] [info] [console_user_server] core_configuration is updated.
+[2024-05-08 20:50:40.624] [info] [console_user_server] version 14.13.0
+[2024-05-08 20:50:51.006] [info] [console_user_server] on_console_changed: on_console:true
+[2024-05-08 20:50:51.007] [info] [console_user_server] grabber_client is started.
+[2024-05-08 20:50:51.008] [info] [console_user_server] grabber_client is connected.
+[2024-05-08 20:50:51.159] [info] [console_user_server] Load /Users/shubymao/.config/karabiner/karabiner.json...
+[2024-05-08 20:50:51.159] [info] [console_user_server] core_configuration is updated.
+[2024-05-08 21:01:30.396] [info] [console_user_server] Load /Users/shubymao/.config/karabiner/karabiner.json...
+[2024-05-08 21:01:30.403] [info] [console_user_server] core_configuration is updated.
+[2024-05-08 21:01:31.501] [info] [console_user_server] Load /Users/shubymao/.config/karabiner/karabiner.json...
+[2024-05-08 21:01:31.504] [info] [console_user_server] core_configuration is updated.
+[2024-05-08 21:01:36.755] [info] [console_user_server] Load /Users/shubymao/.config/karabiner/karabiner.json...
+[2024-05-08 21:01:36.758] [info] [console_user_server] core_configuration is updated.
+[2024-05-08 21:01:38.753] [info] [console_user_server] Load /Users/shubymao/.config/karabiner/karabiner.json...
+[2024-05-08 21:01:38.762] [info] [console_user_server] core_configuration is updated.

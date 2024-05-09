@@ -7,14 +7,32 @@
     - fonts 
 
 - name: Check if font exists
+  shell: "ls {{ lookup('env', 'HOME') }}/Library/Fonts/SauceCodeProNerdFont-Regular.ttf"
+  register: font_exists
+  ignore_errors: yes
+  tags: 
+    - font 
+    - fonts 
+  when: ansible_os_family == "Darwin"
+- name: Copy font
+  when: font_exists is failed
+  copy:
+    src: "../fonts/"
+    dest: "{{ lookup('env', 'HOME') }}/Library/Fonts/"
+    mode: 0700
+  tags: 
+    - font 
+    - fonts 
+  when: ansible_os_family == "Darwin"
+- name: Check if font exists (debian)
   shell: "ls {{ lookup('env', 'HOME') }}/.fonts/SauceCodeProNerdFont-Regular.ttf"
   register: font_exists
   ignore_errors: yes
   tags: 
     - font 
     - fonts 
-
-- name: Copy font
+  when: ansible_os_family == "Debian"
+- name: Copy font (debian)
   when: font_exists is failed
   copy:
     src: "../fonts/"
@@ -23,4 +41,4 @@
   tags: 
     - font 
     - fonts 
-
+  when: ansible_os_family == "Debian"
