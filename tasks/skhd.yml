@@ -13,6 +13,13 @@
     state: latest
     update_homebrew: true
   tags: skhd
+- name: Install jq MacOS (for toggle stack mode) 
+  when: ansible_os_family == "Darwin"
+  homebrew:
+    name: jq 
+    state: latest
+    update_homebrew: true
+  tags: skhd
 - name: Ensure .config directory exists.
   when: ansible_os_family == "Darwin"
   file:

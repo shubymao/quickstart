@@ -1,3 +1,10 @@
+# Stacked layout 
+alt - e : yabai -m window --focus stack.next || yabai -m window --focus stack.first
+alt - q : yabai -m window --focus stack.prev || yabai -m window --focus stack.last
+alt - s : yabai -m space --layout $(yabai -m query --spaces --space | jq -r 'if .type == "bsp" then "stack" else "bsp" end')
+shift + alt - s : yabai -m space --layout float
+# alt - s : yabai -m space --layout stack 
+# alt - d : yabai -m space --layout bsp
 # -- Changing Window Focus --
 
 # change window focus within space
@@ -25,7 +32,7 @@ shift + alt - x : yabai -m space --mirror x-axis
 shift + alt - t : yabai -m window --toggle float --grid 4:4:1:1:2:2
 
 # close window
-alt - q : yabai -m window --close 
+shift + alt - q : yabai -m window --close 
 # close tab 
 alt - w : skhd --key "cmd-w"
 
