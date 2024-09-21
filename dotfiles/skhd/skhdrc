@@ -1,13 +1,12 @@
 # Stacked layout 
 alt - e : yabai -m window --focus stack.next || yabai -m window --focus stack.first
 alt - q : yabai -m window --focus stack.prev || yabai -m window --focus stack.last
-# alt - s : yabai -m space --layout $(yabai -m query --spaces --space | jq -r 'if .type == "bsp" then "stack" else "bsp" end')
-alt - s : yabai -m space --layout $(export PATH=/Users/lelimao/homebrew/bin/ && yabai -m query --spaces --space | jq -r 'if .type == "bsp" then "stack" else "bsp" end')
-shift + alt - s : yabai -m space --layout float
+alt - s : yabai -m space --layout $(yabai -m query --spaces --space | jq -r 'if .type == "bsp" then "stack" else "bsp" end')
+# alt - s : yabai -m space --layout $(export PATH=/Users//homebrew/bin/ && yabai -m query --spaces --space | jq -r 'if .type == "bsp" then "stack" else "bsp" end')
+# shift + alt - s : yabai -m space --layout float
 # alt - s : yabai -m space --layout stack 
 # alt - d : yabai -m space --layout bsp
 # -- Changing Window Focus --
-
 # change window focus within space
 alt - j : yabai -m window --focus south || yabai -m display --focus west
 alt - k : yabai -m window --focus north || yabai -m display --focus south
@@ -38,7 +37,7 @@ shift + alt - q : yabai -m window --close
 alt - w : skhd --key "cmd-w"
 
 # open terminal
-alt - t : open -na /Applications/iTerm.app
+alt - t : open -n /Applications/iTerm.app
 
 # -- Modifying Window Size --
 
