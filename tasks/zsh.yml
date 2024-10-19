@@ -37,6 +37,13 @@
     dest: "~/.oh-my-zsh/plugins/zsh-syntax-highlighting"
   tags: zsh
 
+- name: Install zsh-autocomplete
+  ansible.builtin.git:
+    repo: 'https://github.com/marlonrichert/zsh-autocomplete.git'
+    dest: "~/.oh-my-zsh/plugins/zsh-autocomplete"
+    depth: 1
+  tags: zsh
+
 - name: Install Power Level 10k
   ansible.builtin.git:
     repo: 'https://github.com/romkatv/powerlevel10k.git'
