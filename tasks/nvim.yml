@@ -1,12 +1,12 @@
-- name: Set exectuable permission for nvim app image
+- name: Install System Packages 1 
+  become: true
   when: >
     ansible_os_family == "Debian" 
     or ansible_os_family == "RedHat"
-  file:
-    path: "/usr/local/bin/nvim"
-    mode: "755"
-  become: true
-  tags: nvim
+  apt:
+    name: ["build-essential", "cmake", "ninja-build", "gettext", "unzip", "curl"]
+  tags:
+    - nvim
 
 - name: Clone Neovim
   when: >
@@ -18,11 +18,13 @@
   tags:
     - nvim
 
+
+      
 - name: Build neovim
   when: >
     ansible_os_family == "Debian" 
     or ansible_os_family == "RedHat"
-  shell: "cd {{ lookup('env', 'HOME') }}/neovim && make -j 20"
+  shell: "cd {{ lookup('env', 'HOME') }}/neovim && make CMAKE_BUILD_TYPE=RelWithDebInfo"
   tags:
     - nvim
 
@@ -34,17 +36,6 @@
   shell: "cd {{ lookup('env', 'HOME') }}/neovim && make install"
   tags:
     - nvim
-
-- name: Print debug steps for neo vim installation if not successful
-  when: >
-    ansible_os_family == "Debian" 
-    or ansible_os_family == "RedHat"
-  ansible.builtin.debug:
-    msg: 
-    - If you are using older linux machine/OS, 
-    - please follow installation instruction here. 
-    - https://github.com/neovim/neovim/wiki/Installing-Neovim
-  tags: nvim
 
 - name: Ensuring Homebrew is installed MacOS
   stat:
