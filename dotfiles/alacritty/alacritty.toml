@@ -55,7 +55,7 @@ TERM = "xterm-256color"
 WINIT_X11_SCALE_FACTOR = "1"
 
 [font]
-size = 16
+size = 18
 
 [font.bold]
 family = "SauceCodePro Nerd Font"
@@ -69,7 +69,7 @@ style = "Bold Italic"
 x = 0
 y = 0
 
-[font.itatic]
+[font.italic]
 family = "SauceCodePro Nerd Font"
 style = "Italic"
 
@@ -192,18 +192,12 @@ hide_when_typing = false
 action = "PasteSelection"
 mouse = "Middle"
 
-[mouse.double_click]
-threshold = 300
-
-[mouse.triple_click]
-threshold = 300
-
 [scrolling]
 history = 8000
 multiplier = 3
 
 [selection]
-save_to_clipboard = false
+save_to_clipboard = true 
 semantic_escape_chars = ",│`|:\"' ()[]{}<>\t"
 
 [shell]
@@ -218,7 +212,3 @@ startup_mode = "Windowed"
 [window.dimensions]
 columns = 80
 lines = 24
-
-[window.padding]
-x = 5
-y = 5
