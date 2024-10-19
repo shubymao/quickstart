@@ -1,20 +1,3 @@
-- name: ensure lib fuse2 is installed debian
-  apt:
-    name:
-      - libfuse2
-  when: ansible_os_family == "Debian" 
-  tags: nvim
-  become: true
-- name: install neo vim linux
-  get_url:
-    url: "https://github.com/neovim/neovim/releases/latest/download/nvim.appimage"
-    dest: "/usr/local/bin/nvim"
-  when: >
-    ansible_os_family == "Debian" 
-    or ansible_os_family == "RedHat"
-  become: true
-  tags: nvim
-
 - name: Set exectuable permission for nvim app image
   when: >
     ansible_os_family == "Debian" 
@@ -24,6 +7,33 @@
     mode: "755"
   become: true
   tags: nvim
+
+- name: Clone Neovim
+  when: >
+    ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+  ansible.builtin.git:
+    repo: 'https://github.com/neovim/neovim.git'
+    dest: "{{ lookup('env', 'HOME') }}/neovim"
+  tags:
+    - nvim
+
+- name: Build neovim
+  when: >
+    ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+  shell: "cd {{ lookup('env', 'HOME') }}/neovim && make -j 20"
+  tags:
+    - nvim
+
+- name: Install neovim
+  when: >
+    ansible_os_family == "Debian" 
+    or ansible_os_family == "RedHat"
+  become: true
+  shell: "cd {{ lookup('env', 'HOME') }}/neovim && make install"
+  tags:
+    - nvim
 
 - name: Print debug steps for neo vim installation if not successful
   when: >
