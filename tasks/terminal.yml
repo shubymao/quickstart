@@ -32,10 +32,17 @@
 
   loop: 
     - "../dotfiles/alacritty"
-  when: ansible_os_family == "Debian"
   tags:
     - terminal
  
+- name: Install alacritty MacOS 
+  when: ansible_os_family == "Darwin"
+  homebrew:
+    name: alacritty 
+    state: latest
+    update_homebrew: true
+  tags: terminal
+
 - name: Install iterm2 MacOS 
   when: ansible_os_family == "Darwin"
   homebrew:
