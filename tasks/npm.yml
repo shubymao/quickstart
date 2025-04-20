@@ -1,7 +1,34 @@
-- name: Install nvm
+- name: Print NVM installing
+  debug: msg="Installing NVM 0.40.2 please update tasks/npm.yml if you want newer version."
+  when: 
+    - ansible_os_family == "Darwin" or ansible_os_family == "Debian"
+  tags: 
+    - nvm
+    - npm
+- name: Print node not installed warning
+  debug: msg="Warning OS {{ansible_os_family}} not supported for install nvm. Please add support at tasks/npm.yml"
+  when: 
+    - ansible_os_family != "Darwin" and ansible_os_family != "Debian"
+  tags: 
+    - nvm
+    - npm
+- name: Install nvm MacOS
   become: no
   ansible.builtin.shell: >
-    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.39.1/install.sh | bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
+  args:
+    executable: /bin/bash
+    chdir: "$HOME"
+    creates: "$HOME/.nvm/nvm.sh"
+  when: ansible_os_family == "Darwin"
+  tags: 
+    - nvm
+    - npm
+- name: Install nvm Debian
+  become: no
+  ansible.builtin.shell: >
+    wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
+  when: ansible_os_family == "Debian"
   args:
     executable: /bin/bash
     chdir: "$HOME"
@@ -9,11 +36,20 @@
   tags: 
     - nvm
     - npm
-- name: Install node and set version
+- name: Print Installing Node
+  debug: msg="Installing latest node version"
+  when: 
+    - ansible_os_family == "Darwin" or ansible_os_family == "Debian"
+  tags: 
+    - nvm
+    - npm
+- name: Install latest node and set version
   become: no
   shell: >
-    /bin/bash -c "source ~/.nvm/nvm.sh && nvm install node"
+    /bin/bash -c "source /home/{{ ansible_user_id }}/.nvm/nvm.sh && nvm install node"
     creates=/home/{{ ansible_user_id }}/.nvm/alias
+  when: 
+    - ansible_os_family == "Darwin" or ansible_os_family == "Debian"
   args:
     executable: /bin/bash
     chdir: "{{ ansible_env.HOME }}"
@@ -21,3 +57,5 @@
   tags: 
     - nvm 
     - npm
+    
+

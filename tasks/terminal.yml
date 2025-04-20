@@ -1,3 +1,6 @@
+###########################################
+# Debian Setup ----------------------------
+###########################################
 - name: Update apt
   become: true
   apt:
@@ -7,15 +10,7 @@
   when: ansible_os_family == "Debian"
   tags:
     - terminal
-- name: add required repository
-  become: true
-  ansible.builtin.apt_repository:
-    repo: "{{ item }}"
-  loop:
-    - 'ppa:aslatter/ppa' # for alacritty
-  when: ansible_os_family == "Debian"
-  tags:
-    - terminal
+
 - name: install terminal and related packages
   become: true
   ansible.builtin.apt:
@@ -34,6 +29,10 @@
     - "../dotfiles/alacritty"
   tags:
     - terminal
+
+###########################################
+# MAC-OS Setup ----------------------------
+###########################################
  
 - name: Install alacritty MacOS 
   when: ansible_os_family == "Darwin"

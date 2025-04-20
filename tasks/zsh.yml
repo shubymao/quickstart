@@ -13,7 +13,9 @@
   shell: chsh -s $(which zsh)
   become: true
   tags: zsh
-
+- name: Inform user that chsh require logout and log back in to take effect
+  debug: msg="Updated zsh as default shell. chsh require logout and log back in to take effect"
+  
 - name: Check that the somefile.conf exists
   stat:
     path: ~/.oh-my-zsh
@@ -47,7 +49,7 @@
 - name: Install zsh-completion
   ansible.builtin.git:
     repo: 'https://github.com/zsh-users/zsh-completions.git'
-    dest: "~/.oh-my-zsh/plugins/zsh-completion"
+    dest: "~/.oh-my-zsh/plugins/zsh-completions"
     depth: 1
   tags: zsh
 
@@ -66,6 +68,13 @@
     - src: "../dotfiles/.zshrc"
     - src: "../dotfiles/.p10k.zsh"
     - src: "../dotfiles/.aliases"
+  tags: zsh
+- name: copy custom zsh for Debian 
+  when: ansible_os_family == "Debian"
+  copy:
+    src: "../dotfiles/debian/.zshrc.local"
+    dest: "~/"
+    mode: "0644"
   tags: zsh
 - name: copy custom zsh for MacOS
   when: ansible_os_family == "Darwin"

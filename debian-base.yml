@@ -22,15 +22,8 @@
       tags: nvim
     - include_tasks: tasks/yabai.yml
       tags: yabai
-    - include_tasks: tasks/skhd.yml
-      tags: skhd
-    - include_tasks: tasks/obsidian.yml
-      tags: obsidian
-    - include_tasks: tasks/karabiner-elements.yml
-      tags: karabiner
     - include_tasks: tasks/cli.yml
       tags: cli
     - include_tasks: tasks/terminal.yml
       tags: terminal
-    - include_tasks: tasks/browser.yml
-      tags: browser
+
