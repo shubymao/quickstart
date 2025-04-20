@@ -76,6 +76,7 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
+  zsh-autocomplete
 	git
 	dotenv
 	vscode
@@ -89,6 +90,7 @@ plugins=(
 	docker-compose
 	zsh-syntax-highlighting
 	zsh-autosuggestions
+  zsh-completions
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -122,10 +124,18 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
 # Key binding
+zstyle ':completion:*' menu select
+zmodload zsh/complist
 bindkey '^ ' autosuggest-accept
 bindkey '^y' autosuggest-accept
-bindkey              '^I'         menu-complete
-bindkey "$terminfo[kcbt]" reverse-menu-complete
+bindkey '^n' menu-select
+bindkey '^p' menu-select
+bindkey -M menuselect '^n' forward-char
+bindkey -M menuselect '^p' backward-char
+bindkey -M menuselect 'h' vi-backward-char
+bindkey -M menuselect 'k' vi-up-line-or-history
+bindkey -M menuselect 'l' vi-forward-char
+bindkey -M menuselect 'j' vi-down-line-or-history
 # Aliases
 . ~/.aliases
 
