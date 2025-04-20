@@ -44,6 +44,13 @@
     depth: 1
   tags: zsh
 
+- name: Install zsh-completion
+  ansible.builtin.git:
+    repo: 'https://github.com/zsh-users/zsh-completions.git'
+    dest: "~/.oh-my-zsh/plugins/zsh-completion"
+    depth: 1
+  tags: zsh
+
 - name: Install Power Level 10k
   ansible.builtin.git:
     repo: 'https://github.com/romkatv/powerlevel10k.git'
