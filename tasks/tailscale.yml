@@ -1,0 +1,46 @@
+- name: Print tailscale install warning
+  when:
+    - ansible_os_family != "Debian"
+  tags:
+    - tailscale
+  debug:
+    msg: >-
+      Warning Unable to install tailscale for OS {{ ansible_os_family }}.
+      Please update tasks/tailscale.yml to support it.
+
+- name: Update apt
+  when: ansible_os_family == "Debian"
+  tags:
+    - tailscale 
+  become: true
+  apt:
+    force_apt_get: true
+    update_cache: true
+    state: present
+
+- name: Add tailscale gpg key and repository
+  when: ansible_os_family == "Debian"
+  tags:
+    - tailscale 
+  become: true
+  deb822_repository:
+    name: tailscale
+    types: 
+      - deb
+    suites: 
+      - bookworm
+    uris:
+      - https://pkgs.tailscale.com/stable/debian
+    components:
+      - main
+    state: present
+    signed_by: https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg 
+
+- name: Install tailscale
+  when: ansible_os_family == "Debian"
+  tags:
+    - tailscale 
+  become: true
+  ansible.builtin.apt:
+    name:
+      - tailscale

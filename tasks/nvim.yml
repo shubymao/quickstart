@@ -36,6 +36,14 @@
   shell: "cd {{ lookup('env', 'HOME') }}/neovim && make install"
   tags:
     - nvim
+- name: Install xclip for clipboard sharing
+  when: ansible_os_family == "Debian"
+  tags:
+    -  nvim
+  become: true
+  ansible.builtin.apt:
+    name:
+      - xclip
 
 - name: Ensuring Homebrew is installed MacOS
   stat:
