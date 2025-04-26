@@ -1,0 +1,20 @@
+
+- name: Update apt
+  when: ansible_os_family == "Debian"
+  tags:
+    - go
+  become: true
+  apt:
+    force_apt_get: true
+    update_cache: true
+    state: present
+
+- name: Install golang
+  when: ansible_os_family == "Debian"
+  tags:
+    - go
+  become: true
+  ansible.builtin.apt:
+    name:
+      - golang-go
+    state: latest

@@ -36,3 +36,5 @@
       tags: browser
     - include_tasks: tasks/tailscale.yml
       tags: tailscale
+    - include_tasks: tasks/golang.yml
+      tags: go 
