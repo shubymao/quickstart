@@ -67,6 +67,15 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # see 'man strftime' for details.
 # HIST_STAMPS="mm/dd/yyyy"
 
+# history setup
+HISTFILE=$HOME/.zhistory
+SAVEHIST=1000
+HISTSIZE=999
+setopt share_history 
+setopt hist_expire_dups_first
+setopt hist_ignore_dups
+setopt hist_verify
+
 # Would you like to use another custom folder than $ZSH/custom?
 # ZSH_CUSTOM=/path/to/new-custom-folder
 
@@ -127,19 +136,51 @@ source $ZSH/oh-my-zsh.sh
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
 
-# Key binding
-zstyle ':completion:*' menu select
-zmodload zsh/complist
-bindkey '^ ' autosuggest-accept
+# Key binding zsh autocompletion
+zstyle ':completion:*' completer _complete _complete:-fuzzy _correct _approximate _ignored
+bindkey              '^I' menu-select
+bindkey "$terminfo[kcbt]" menu-select
+bindkey -M menuselect              '^I'         menu-complete
+bindkey -M menuselect "$terminfo[kcbt]" reverse-menu-complete
+
+# Restore default behavor for up and down arrow
+# source https://github.com/marlonrichert/zsh-autocomplete?tab=readme-ov-file#restore-zsh-default-history-shortcuts
+bindkey -M emacs \
+    "^[p"   .history-search-backward \
+    "^[n"   .history-search-forward \
+    "^[OA"  .up-line-or-history \
+    "^[[A"  .up-line-or-history \
+    "^[OB"  .down-line-or-history \
+    "^[[B"  .down-line-or-history \
+    "^R"    .history-incremental-search-backward \
+    "^S"    .history-incremental-search-forward \
+    # "^N"    .down-line-or-history \
+    # "^P"    .up-line-or-history \
+bindkey -a \
+    "k"     .up-line-or-history \
+    "^[OA"  .up-line-or-history \
+    "^[[A"  .up-line-or-history \
+    "j"     .down-line-or-history \
+    "^[OB"  .down-line-or-history \
+    "^[[B"  .down-line-or-history \
+    "/"     .vi-history-search-backward \
+    "?"     .vi-history-search-forward \
+    # "^N"    .down-line-or-history \
+    # "^P"    .up-line-or-history \
+
+# Keybinding zsh auto suggestion
+# bindkey "^P" up-line-or-search
+# bindkey "^N" down-line-or-search
 bindkey '^y' autosuggest-accept
-bindkey '^n' menu-select
-bindkey '^p' menu-select
-bindkey -M menuselect '^n' forward-char
-bindkey -M menuselect '^p' backward-char
-bindkey -M menuselect 'h' vi-backward-char
-bindkey -M menuselect 'k' vi-up-line-or-history
-bindkey -M menuselect 'l' vi-forward-char
-bindkey -M menuselect 'j' vi-down-line-or-history
+bindkey '^ ' autosuggest-accept
+# completion using arrow keys (based on history)
+bindkey "^P" history-search-backward
+bindkey "^N" history-search-forward
+bindkey '^[[A' history-search-backward
+bindkey '^[[B' history-search-forward
+
+bindkey '^H' backward-kill-line
+
 # Aliases
 . ~/.aliases
 
