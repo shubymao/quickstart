@@ -17,8 +17,6 @@
     dest: "{{ lookup('env', 'HOME') }}/neovim"
   tags:
     - nvim
-
-
       
 - name: Build neovim
   when: >
@@ -55,7 +53,9 @@
 - name: Install neo vim MacOS 
   when: ansible_os_family == "Darwin"
   homebrew:
-    name: neovim
+    name: 
+      - neovim
+      - ripgrep
     state: latest
     update_homebrew: true
   tags: nvim
