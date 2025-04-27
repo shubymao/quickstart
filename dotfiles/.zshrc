@@ -181,6 +181,8 @@ bindkey '^[[B' history-search-forward
 
 bindkey '^H' backward-kill-line
 
+# zoxide c
+eval "$(zoxide init zsh)"
 # Aliases
 . ~/.aliases
 
