@@ -20,10 +20,6 @@
       tags: zsh
     - include_tasks: tasks/nvim.yml
       tags: nvim
-    - include_tasks: tasks/yabai.yml
-      tags: yabai
-    - include_tasks: tasks/skhd.yml
-      tags: skhd
     - include_tasks: tasks/obsidian.yml
       tags: obsidian
     - include_tasks: tasks/karabiner-elements.yml

@@ -11,7 +11,7 @@
   tags:
     - terminal
 
-- name: install terminal and related packages
+- name: install alacritty and related packages
   become: true
   ansible.builtin.apt:
     name:
@@ -20,11 +20,12 @@
   when: ansible_os_family == "Debian"
   tags:
     - terminal
-- name: Copy config into the config folder
+
+- name: Copy config into the config folder (Debian)
   copy: 
     src: "{{ item }}"
     dest: "{{ lookup('env', 'HOME') }}/.config/"
-
+  when: ansible_os_family == "Debian"
   loop: 
     - "../dotfiles/alacritty"
   tags:
@@ -34,19 +35,42 @@
 # MAC-OS Setup ----------------------------
 ###########################################
  
-- name: Install alacritty MacOS 
+- name: Install wezterm MacOS 
   when: ansible_os_family == "Darwin"
-  homebrew:
-    name: alacritty 
+  community.general.homebrew_cask:
+    name: wezterm
     state: latest
     update_homebrew: true
   tags: terminal
 
-- name: Install iterm2 MacOS 
+- name: Install alacritty (backup) MacOS 
   when: ansible_os_family == "Darwin"
   homebrew:
-    name: iterm2
+    name: alacritty
     state: latest
     update_homebrew: true
   tags: terminal
+- name: Install alacritty themes
+  when: ansible_os_family == "Darwin"
+  ansible.builtin.git:
+    repo: 'https://github.com/alacritty/alacritty-theme'
+    dest: "~/.config/alacritty/themes"
+  tags: terminal
+- name: Copy config into the config folder
+  copy: 
+    src: "{{ item }}"
+    dest: "{{ lookup('env', 'HOME') }}/.config/"
+  loop: 
+    - "../dotfiles/alacritty"
+  tags:
+    - terminal
+  when: ansible_os_family == "Darwin"
+
+# - name: Install iterm2 MacOS 
+#   when: ansible_os_family == "Darwin"
+#   homebrew:
+#     name: iterm2
+#     state: latest
+#     update_homebrew: true
+#   tags: terminal
 

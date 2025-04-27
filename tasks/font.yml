@@ -2,28 +2,10 @@
   file:
     path: "{{ lookup('env', 'HOME') }}/.fonts"
     state: directory
+  when: ansible_os_family == "Debian"
   tags: 
     - font
     - fonts 
-
-- name: Check if font exists
-  shell: "ls {{ lookup('env', 'HOME') }}/Library/Fonts/SauceCodeProNerdFont-Regular.ttf"
-  register: font_exists
-  ignore_errors: yes
-  tags: 
-    - font 
-    - fonts 
-  when: ansible_os_family == "Darwin"
-- name: Copy font
-  when: font_exists is failed
-  copy:
-    src: "../fonts/"
-    dest: "{{ lookup('env', 'HOME') }}/Library/Fonts/"
-    mode: 0700
-  tags: 
-    - font 
-    - fonts 
-  when: ansible_os_family == "Darwin"
 - name: Check if font exists (debian)
   shell: "ls {{ lookup('env', 'HOME') }}/.fonts/SauceCodeProNerdFont-Regular.ttf"
   register: font_exists
@@ -42,3 +24,16 @@
     - font 
     - fonts 
   when: ansible_os_family == "Debian"
+
+- name: Install nerd font MacOS
+  when: ansible_os_family == "Darwin"
+  community.general.homebrew_cask:
+    name: 
+      - 'font-meslo-lg-nerd-font'
+      - 'font-sauce-code-pro-nerd-font'
+      - 'font-fira-code-nerd-font'
+    state: latest
+    update_homebrew: true
+  tags: 
+    - font
+    - fonts
