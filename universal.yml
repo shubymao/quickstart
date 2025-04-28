@@ -18,6 +18,8 @@
       tags: npm
     - include_tasks: tasks/zsh.yml
       tags: zsh
+    - include_tasks: tasks/tmux.yml
+      tags: tmux
     - include_tasks: tasks/nvim.yml
       tags: nvim
     - include_tasks: tasks/obsidian.yml

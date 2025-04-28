@@ -5,6 +5,8 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+# Local .zshrc
+. ~/.zshrc.local
 
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
@@ -186,8 +188,6 @@ eval "$(zoxide init zsh)"
 # Aliases
 . ~/.aliases
 
-# Local .zshrc
-. ~/.zshrc.local
 
 export EDITOR=/usr/bin/nvim
 export VISUAL=/usr/bin/nvim

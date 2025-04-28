@@ -25,7 +25,6 @@ alias web='cd /var/www/html'
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
-alias ls="eza --icons=always"
 alias cd="z"
 
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
@@ -62,20 +61,21 @@ alias bd='cd "$OLDPWD"'
 alias rmd='/bin/rm  --recursive --force --verbose '
 
 # Alias's for multiple directory listing commands
-alias la='ls -Alh' # show hidden files
-alias ls='ls -aFh --color=auto' # add colors and file type extensions
-alias lx='ls -lXBh' # sort by extension
-alias lk='ls -lSrh' # sort by size
-alias lc='ls -lcrh' # sort by change time
-alias lu='ls -lurh' # sort by access time
-alias lr='ls -lRh' # recursive ls
-alias lt='ls -ltrh' # sort by date
-alias lm='ls -alh |more' # pipe through 'more'
-alias lw='ls -xAh' # wide listing format
-alias ll='ls -Fls' # long listing format
-alias labc='ls -lap' #alphabetical sort
-alias lf="ls -l | egrep -v '^d'" # files only
-alias ldir="ls -l | egrep '^d'" # directories only
+alias ls="eza --icons=auto"
+alias la='eza -Alh --icons=auto' # show hidden files
+alias ls='eza -ah --icons=auto' # add colors and file type extensions
+alias lx='eza -lXBh --icons=auto' # sort by extension
+alias lk='eza -lSrh --icons=auto' # sort by size
+alias lc='eza -lcrh --icons=auto' # sort by change time
+alias lu='eza -lurh --icons=auto' # sort by access time
+alias lr='eza -lRh --icons=auto' # recursive ls
+alias lt='eza -ltrh --icons=auto' # sort by date
+alias lm='eza -alh |more' # pipe through 'more'
+alias lw='eza -xAh --icons=auto' # wide listing format
+alias ll='eza -la --icons=auto' # long listing format
+alias labc='eza -lap --icons=auto' #alphabetical sort
+alias lf="eza -l --icons=auto| egrep -v '^d'" # files only
+alias ldir="eza -l --icons=auto| egrep '^d'" # directories only
 
 # alias chmod commands
 alias mx='chmod a+x'

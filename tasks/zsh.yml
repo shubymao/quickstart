@@ -59,7 +59,7 @@
     dest: "~/.oh-my-zsh/custom/themes/powerlevel10k"
   tags: zsh
 
-- name: Install cd (eza)/ls (zoxide) utility MacOS 
+- name: Install cd (zoxide)/ ls (eza) utility MacOS 
   when: ansible_os_family == "Darwin"
   homebrew:
     name: 
