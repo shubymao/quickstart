@@ -10,7 +10,7 @@ config.font = wezterm.font("MesloLGS Nerd Font Mono")
 config.font_size = 18
 
 -- disable this to prevent tabs
-config.enable_tab_bar = false 
+config.enable_tab_bar = false
 
 config.window_decorations = "TITLE | RESIZE"
 
@@ -18,11 +18,18 @@ config.window_background_opacity = 0.8
 config.macos_window_background_blur = 10
 config.window_close_confirmation = "NeverPrompt"
 config.window_padding = {
-  left = 0,
-  right = 0,
-  top = 0,
-  bottom = 0,
+	left = 0,
+	right = 0,
+	top = 0,
+	bottom = 0,
 }
+local mux = wezterm.mux
+
+wezterm.on("gui-startup", function()
+	local tab, pane, window = mux.spawn_window({})
+	window:gui_window():maximize()
+end)
+
 -- -- my coolnight colorscheme:
 -- config.colors = {
 -- 	foreground = "#CBE0F0",
