@@ -3,3 +3,5 @@
 -- Add any additional options here
 
 vim.g.snacks_animate = false
+vim.opt.spell = true
+vim.opt.spelllang = { "en_us" }
