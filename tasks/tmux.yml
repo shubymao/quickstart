@@ -7,8 +7,17 @@
     state: latest
     update_homebrew: true
 
+- name: Install tmux (debian)
+  when: ansible_os_family == "Debian"
+  tags: tmux
+  apt: 
+    name: 
+      - tmux
+    state: latest 
+  become: true
+
 - name: copy tmux config to home MacOS
-  when: ansible_os_family == "Darwin"
+  when: ansible_os_family == "Darwin" or ansible_os_family == "Debian"
   tags: tmux
   copy:
     src: "{{ item.src }}"
@@ -17,9 +26,10 @@
   loop: 
     - src: "../dotfiles/tmux/.tmux.conf"
 
-- name: Install zsh-autosuggestions
-  when: ansible_os_family == "Darwin"
+- name: Install tpm
+  when: ansible_os_family == "Darwin" or ansible_os_family == "Debian"
   tags: tmux
   ansible.builtin.git:
     repo: 'https://github.com/tmux-plugins/tpm'
     dest: '~/.tmux/plugins/tpm'
+
