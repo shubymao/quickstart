@@ -1,0 +1,29 @@
+[/]
+custom-list=['custom0', 'custom1', 'custom2']
+looking-glass-keybinding=@as []
+
+[custom-keybindings/custom0]
+binding=['<Super>t']
+command='/home/shubymao/shortcuts/wezterm.sh'
+name='wezterm launch or jump to'
+
+[custom-keybindings/custom1]
+binding=['<Super>b']
+command='/home/shubymao/shortcuts/floorp.sh'
+name='floorp launch or jump to'
+
+[custom-keybindings/custom2]
+binding=['<Super>f']
+command='/home/shubymao/shortcuts/nemo.sh'
+name='nemo launch or jump to'
+
+[media-keys]
+area-screenshot=['<Primary><Shift>dollar']
+
+[wm]
+close=['<Alt>F4', '<Primary>q']
+push-tile-down=['<Super>Down', '<Super>j']
+push-tile-left=['<Super>Left', '<Super>h']
+push-tile-right=['<Super>Right', '<Super>l']
+push-tile-up=['<Super>Up', '<Super>k']
+toggle-maximized=['<Super>m']
