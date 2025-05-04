@@ -1,29 +1,69 @@
-- name: Install nerd font
-  file:
-    path: "{{ lookup('env', 'HOME') }}/.fonts"
-    state: directory
+- name: Install multiple Nerd Fonts from latest GitHub release
   when: ansible_os_family == "Debian"
   tags: 
     - font
     - fonts 
-- name: Check if font exists (debian)
-  shell: "ls {{ lookup('env', 'HOME') }}/.fonts/SauceCodeProNerdFont-Regular.ttf"
-  register: font_exists
-  ignore_errors: yes
-  tags: 
-    - font 
-    - fonts 
-  when: ansible_os_family == "Debian"
-- name: Copy font (debian)
-  when: font_exists is failed
-  copy:
-    src: "../fonts/"
-    dest: "{{ lookup('env', 'HOME') }}/.fonts"
-    mode: 0700
-  tags: 
-    - font 
-    - fonts 
-  when: ansible_os_family == "Debian"
+  vars:
+    fonts:
+      - Meslo
+      - FiraCode
+      - SourceCodePro
+    font_dir: "{{ lookup('env', 'HOME') }}/.local/share/fonts"
+    release_api: "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
+  block:
+    - name: Get latest release version from GitHub
+      uri:
+        url: "{{ release_api }}"
+        return_content: yes
+      register: release_response
+
+    - name: Set version variable
+      set_fact:
+        font_version: "{{ release_response.json.tag_name }}"
+
+    - name: Create font directory
+      file:
+        path: "{{ font_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download and extract each font
+      loop: "{{ fonts }}"
+      loop_control:
+        loop_var: font
+      vars:
+        font: "{{ item }}"
+      include_tasks: ./download_font.yml
+
+    - name: Rebuild font cache
+      shell: fc-cache -fv
+
+# - name: Install nerd font
+#   file:
+#     path: "{{ lookup('env', 'HOME') }}/.fonts"
+#     state: directory
+#   when: ansible_os_family == "Debian"
+#   tags: 
+#     - font
+#     - fonts 
+# - name: Check if font exists (debian)
+#   shell: "ls {{ lookup('env', 'HOME') }}/.fonts/SauceCodeProNerdFont-Regular.ttf"
+#   register: font_exists
+#   ignore_errors: yes
+#   tags: 
+#     - font 
+#     - fonts 
+#   when: ansible_os_family == "Debian"
+# - name: Copy font (debian)
+#   when: font_exists is failed
+#   copy:
+#     src: "../fonts/"
+#     dest: "{{ lookup('env', 'HOME') }}/.fonts"
+#     mode: 0700
+#   tags: 
+#     - font 
+#     - fonts 
+#   when: ansible_os_family == "Debian"
 
 - name: Install nerd font MacOS
   when: ansible_os_family == "Darwin"

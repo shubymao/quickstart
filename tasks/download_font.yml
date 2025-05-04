@@ -1,0 +1,16 @@
+- name: Download {{ font }} Nerd Font
+  get_url:
+    url: "https://github.com/ryanoasis/nerd-fonts/releases/download/{{ font_version }}/{{ font }}.zip"
+    dest: "/tmp/{{ font }}.zip"
+    mode: '0644'
+
+- name: Unzip {{ font }} into fonts directory
+  unarchive:
+    src: "/tmp/{{ font }}.zip"
+    dest: "{{ font_dir }}"
+    remote_src: yes
+
+- name: Remove downloaded zip file
+  file:
+    path: "/tmp/{{ font }}.zip"
+    state: absent

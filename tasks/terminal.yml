@@ -11,6 +11,35 @@
   tags:
     - terminal
 
+- name: Download GPG key
+  become: true
+  ansible.builtin.get_url:
+    url: https://apt.fury.io/wez/gpg.key
+    dest: /usr/share/keyrings/wezterm-fury.gpg
+    mode: '0644'
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+
+- name: Convert GPG key to dearmored format
+  become: true
+  ansible.builtin.command:
+    cmd: gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
+    stdin: "{{ lookup('file', '/usr/share/keyrings/wezterm-fury.gpg') }}"
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+
+- name: Add WezTerm APT source list
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *"
+    filename: wezterm
+    state: present
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+
 - name: install alacritty and wezterm related packages
   become: true
   ansible.builtin.apt:
