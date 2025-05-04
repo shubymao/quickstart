@@ -33,4 +33,6 @@
     - include_tasks: tasks/tailscale.yml
       tags: tailscale
     - include_tasks: tasks/golang.yml
-      tags: go 
+      tags: go
+    - include_tasks: tasks/cinnamon.yml
+      tags: cinnamon
