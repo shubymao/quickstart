@@ -2,7 +2,13 @@
   apt: 
     name: 
       - zsh
-      - curl 
+      - curl
+      - zoxide
+      - eza
+      - bat
+      - htop # process status 
+      - fzf # terminal auto complete 
+      - ripgrep # search 
     state: present
   become: true
   when: ansible_os_family == "Debian"
