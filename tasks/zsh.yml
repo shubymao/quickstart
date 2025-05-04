@@ -14,7 +14,6 @@
           - htop # process status 
           - fzf # terminal auto complete 
           - ripgrep # search 
-          - tldr
         state: latest 
       become: true
       when: ansible_os_family == "Debian"
@@ -42,7 +41,6 @@
           - htop # process status 
           - fzf # terminal auto complete 
           - ripgrep # search 
-          - tldr # better manual
         state: latest
         update_homebrew: true
     - name: copy custom zsh for MacOS
@@ -53,10 +51,16 @@
         force: false
 
 # Global Configuration Starts Here
+- name: Install "tldr" node.js package globally.
+  tags: zsh
+  npm:
+    name: tldr
+    global: yes
+
 - name: Change shell to zsh
+  tags: zsh
   shell: chsh -s $(which zsh)
   become: true
-  tags: zsh
 
 - name: Inform user that chsh require logout and log back in to take effect
   debug: msg="Updated zsh as default shell. chsh require logout and log back in to take effect"

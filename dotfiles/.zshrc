@@ -87,7 +87,7 @@ setopt hist_verify
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
-  zsh-autocomplete
+  # zsh-autocomplete
 	git
 	dotenv
 	vscode
@@ -102,7 +102,9 @@ plugins=(
 	zsh-syntax-highlighting
 	zsh-autosuggestions
   zsh-completions
+  fzf-tab
 )
+
 
 source $ZSH/oh-my-zsh.sh
 
@@ -138,35 +140,38 @@ source $ZSH/oh-my-zsh.sh
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
 
-# Key binding zsh autocompletion
-zstyle ':completion:*' completer _complete _complete:-fuzzy _correct _approximate _ignored
-bindkey              '^I' menu-select
-bindkey "$terminfo[kcbt]" menu-select
-bindkey -M menuselect              '^I'         menu-complete
-bindkey -M menuselect "$terminfo[kcbt]" reverse-menu-complete
-
+# Key binding zsh autocomplete
+# zstyle -e ':autocomplete:*:*' list-lines 'reply=4'
+# zstyle ':completion:*' completer _complete _complete:-fuzzy _correct _approximate _ignored
+# bindkey              '^I' menu-select
+# bindkey "$terminfo[kcbt]" menu-select
+# bindkey -M menuselect              '^I'         menu-complete
+# bindkey -M menuselect "$terminfo[kcbt]" reverse-menu-complete
+# https://unix.stackexchange.com/questions/26789/pipe-zsh-auto-completion-list-to-file-or-less/30092#30092
+# autoload -Uz compinit
+# compinit
 # Restore default behavor for up and down arrow
 # source https://github.com/marlonrichert/zsh-autocomplete?tab=readme-ov-file#restore-zsh-default-history-shortcuts
 bindkey -M emacs \
     "^[p"   .history-search-backward \
     "^[n"   .history-search-forward \
+    "^R"    .history-incremental-search-backward \
+    "^S"    .history-incremental-search-forward \
     "^[OA"  .up-line-or-history \
     "^[[A"  .up-line-or-history \
     "^[OB"  .down-line-or-history \
     "^[[B"  .down-line-or-history \
-    "^R"    .history-incremental-search-backward \
-    "^S"    .history-incremental-search-forward \
     # "^N"    .down-line-or-history \
     # "^P"    .up-line-or-history \
 bindkey -a \
+    "/"     .vi-history-search-backward \
+    "?"     .vi-history-search-forward \
     "k"     .up-line-or-history \
     "^[OA"  .up-line-or-history \
     "^[[A"  .up-line-or-history \
     "j"     .down-line-or-history \
     "^[OB"  .down-line-or-history \
     "^[[B"  .down-line-or-history \
-    "/"     .vi-history-search-backward \
-    "?"     .vi-history-search-forward \
     # "^N"    .down-line-or-history \
     # "^P"    .up-line-or-history \
 
@@ -174,7 +179,6 @@ bindkey -a \
 # bindkey "^P" up-line-or-search
 # bindkey "^N" down-line-or-search
 bindkey '^y' autosuggest-accept
-bindkey '^ ' autosuggest-accept
 # completion using arrow keys (based on history)
 bindkey "^P" history-search-backward
 bindkey "^N" history-search-forward
