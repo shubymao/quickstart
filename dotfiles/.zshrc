@@ -87,7 +87,6 @@ setopt hist_verify
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
-  # zsh-autocomplete
 	git
 	dotenv
 	vscode
@@ -99,13 +98,15 @@ plugins=(
 	golang
 	docker
 	docker-compose
-	zsh-syntax-highlighting
+  # fzf-tab
+  zsh-autocomplete
 	zsh-autosuggestions
-  zsh-completions
-  fzf-tab
+	zsh-syntax-highlighting
 )
 
-
+fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
+# autocomplete zsh
+zstyle ':completion:*' completer _complete _complete:-fuzzy _correct _approximate _ignored
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
@@ -141,54 +142,24 @@ export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || pr
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
 
 # Key binding zsh autocomplete
-# zstyle -e ':autocomplete:*:*' list-lines 'reply=4'
-# zstyle ':completion:*' completer _complete _complete:-fuzzy _correct _approximate _ignored
-# bindkey              '^I' menu-select
-# bindkey "$terminfo[kcbt]" menu-select
-# bindkey -M menuselect              '^I'         menu-complete
-# bindkey -M menuselect "$terminfo[kcbt]" reverse-menu-complete
-# https://unix.stackexchange.com/questions/26789/pipe-zsh-auto-completion-list-to-file-or-less/30092#30092
-# autoload -Uz compinit
-# compinit
-# Restore default behavor for up and down arrow
-# source https://github.com/marlonrichert/zsh-autocomplete?tab=readme-ov-file#restore-zsh-default-history-shortcuts
-bindkey -M emacs \
-    "^[p"   .history-search-backward \
-    "^[n"   .history-search-forward \
-    "^R"    .history-incremental-search-backward \
-    "^S"    .history-incremental-search-forward \
-    "^[OA"  .up-line-or-history \
-    "^[[A"  .up-line-or-history \
-    "^[OB"  .down-line-or-history \
-    "^[[B"  .down-line-or-history \
-    # "^N"    .down-line-or-history \
-    # "^P"    .up-line-or-history \
-bindkey -a \
-    "/"     .vi-history-search-backward \
-    "?"     .vi-history-search-forward \
-    "k"     .up-line-or-history \
-    "^[OA"  .up-line-or-history \
-    "^[[A"  .up-line-or-history \
-    "j"     .down-line-or-history \
-    "^[OB"  .down-line-or-history \
-    "^[[B"  .down-line-or-history \
-    # "^N"    .down-line-or-history \
-    # "^P"    .up-line-or-history \
+bindkey '^N' menu-select
+bindkey "^P" reverse-menu-select
+bindkey -M menuselect '^N' menu-complete
+bindkey -M menuselect "^P" reverse-menu-complete
 
-# Keybinding zsh auto suggestion
-# bindkey "^P" up-line-or-search
-# bindkey "^N" down-line-or-search
+# Fzf-tab
+# bindkey "^I" fzf-tab-complete
+
+# ZSH auto suggestion
 bindkey '^y' autosuggest-accept
-# completion using arrow keys (based on history)
-bindkey "^P" history-search-backward
-bindkey "^N" history-search-forward
-bindkey '^[[A' history-search-backward
-bindkey '^[[B' history-search-forward
 
+# control back space to delete a line
 bindkey '^H' backward-kill-line
 
-# zoxide c
+# zoxide init
 eval "$(zoxide init zsh)"
+ 
+
 # Aliases
 . ~/.aliases
 

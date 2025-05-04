@@ -103,6 +103,13 @@
     dest: "~/.oh-my-zsh/plugins/zsh-completions"
     depth: 1
 
+- name: Install fzf-tab
+  tags: zsh
+  ansible.builtin.git:
+    repo: 'https://github.com/Aloxaf/fzf-tab'
+    dest: "~/.oh-my-zsh/plugins/fzf-tab"
+    depth: 1
+
 - name: Install Power Level 10k
   tags: zsh
   ansible.builtin.git:
