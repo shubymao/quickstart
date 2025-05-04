@@ -11,13 +11,23 @@
   tags:
     - terminal
 
-- name: install alacritty and related packages
+- name: install alacritty and wezterm related packages
   become: true
   ansible.builtin.apt:
     name:
-      - alacritty # terminal
-      # - compton # transparent background support
+      - wezterm # main terminal
+      - alacritty # backup terminal
+    state: latest
   when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+- name: Copy wezterm config into the config folder (Debian)
+  copy: 
+    src: "{{ item }}"
+    dest: "{{ lookup('env', 'HOME') }}/"
+  when: ansible_os_family == "Debian"
+  loop: 
+    - "../dotfiles/wezterm/.wezterm.lua"
   tags:
     - terminal
 
