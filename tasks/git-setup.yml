@@ -1,14 +1,34 @@
 - name: Git personal setup email
+  tags: 
+    - git
   community.general.git_config:
     name: user.email
     scope: global
     value: "shuby.mao@gmail.com"
-  tags: 
-    - git
 - name: Git personal setup name
+  tags:
+    - git
   community.general.git_config:
     name: user.name
     scope: global
     value: "shubymao"
+- name: Git Rebase Type Config
   tags:
     - git
+  community.general.git_config:
+    name: pull.rebase
+    scope: global
+    value: true
+- name: config git limits
+  tags:
+    - git
+  vars:
+    protocol_name:
+      - http
+      - ssh
+  block:
+    - name: config limits loop
+      loop: "{{ protocol_name }}"
+      loop_control:
+        loop_var: protocol_name
+      include_tasks: ./git_limit.yml

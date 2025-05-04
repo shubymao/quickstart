@@ -1,0 +1,16 @@
+
+- name: Git max ssh low speed time threshold
+  community.general.git_config:
+    name:  "{{protocol_name}}.lowSpeedTime"
+    scope: global
+    value: 999999
+- name: Git max ssh low speed time threshold
+  community.general.git_config:
+    name: "{{protocol_name}}.lowSpeedLimit"
+    scope: global
+    value: 0
+- name: Git max ssh bandwidth threshold
+  community.general.git_config:
+    name: "{{protocol_name}}.postBuffer"
+    scope: global
+    value: 157286400
