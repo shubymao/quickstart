@@ -15,6 +15,7 @@
   ansible.builtin.git:
     repo: 'https://github.com/neovim/neovim.git'
     dest: "{{ lookup('env', 'HOME') }}/neovim"
+    force: true
   tags:
     - nvim
       
