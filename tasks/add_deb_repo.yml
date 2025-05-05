@@ -1,0 +1,44 @@
+- name: Instal gpg or asc key 
+  when: ansible_os_family == "Debian"
+  block:
+    - name: Ensure keyrings directory exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Set key extension and filenames
+      set_fact:
+        key_ext: "{{ key_url | regex_search('\\.([a-z]+)$') }}"
+    - name: Fail if key format is not supported
+      fail:
+        msg: "Unsupported key file extension: {{ key_ext }}. Only .asc and .gpg are allowed."
+      when: key_ext not in [".asc", ".gpg"] 
+    - name: Set key format and filenames
+      set_fact:
+        raw_key_path: "/etc/apt/keyrings/{{ keyring_name }}{{ key_ext }}"
+        final_key_path: "/etc/apt/keyrings/{{ keyring_name }}.gpg"
+
+    - name: Download GPG key
+      get_url:
+        url: "{{ key_url }}"
+        dest: "{{ raw_key_path }}"
+        mode: '0644'
+
+    - name: Convert ASCII key to dearmored GPG
+      command: >
+        gpg --dearmor -o {{ final_key_path }} {{ raw_key_path }}
+      when: key_ext == ".asc"
+      args:
+        creates: "{{ final_key_path }}"
+
+    - name: Add APT repository
+      copy:
+        dest: "/etc/apt/sources.list.d/{{ keyring_name }}.list"
+        content: |
+          deb [signed-by={{ final_key_path }}] {{ repo_url }} {{ release }} {{ component }}
+        mode: '0644'
+
+    - name: Update APT cache
+      apt:
+        update_cache: yes
