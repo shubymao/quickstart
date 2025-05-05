@@ -69,6 +69,9 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # see 'man strftime' for details.
 # HIST_STAMPS="mm/dd/yyyy"
 
+# FZF config
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border --scrollbar --color scrollbar:red'
+
 # history setup
 HISTFILE=$HOME/.zhistory
 SAVEHIST=1000
@@ -98,16 +101,40 @@ plugins=(
 	golang
 	docker
 	docker-compose
-  # fzf-tab
   zsh-autocomplete
+  fzf-tab
+  fzf
 	zsh-autosuggestions
 	zsh-syntax-highlighting
 )
 
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 # autocomplete zsh
-zstyle ':completion:*' completer _complete _complete:-fuzzy _correct _approximate _ignored
+autoload -U compinit && compinit
+
+
 source $ZSH/oh-my-zsh.sh
+
+zstyle ':completion:*' completer _complete _complete:-fuzzy _correct _approximate _ignored
+# # disable sort when completing `git checkout`
+zstyle ':completion:*:git-checkout:*' sort false
+# # set descriptions format to enable group support
+# # NOTE: don't use escape sequences (like '%F{red}%d%f') here, fzf-tab will ignore them
+# zstyle ':completion:*:descriptions' format '[%d]'
+# # set list-colors to enable filename colorizing
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+# # force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
+zstyle ':completion:*' menu no
+# # preview directory's content with eza when completing cd
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+# # custom fzf flags
+# # NOTE: fzf-tab does not follow FZF_DEFAULT_OPTS by default
+zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
+# # To make fzf-tab follow FZF_DEFAULT_OPTS.
+# # NOTE: This may lead to unexpected behavior since some flags break this plugin. See Aloxaf/fzf-tab#455.
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
+# # switch group using `<` and `>`
+zstyle ':fzf-tab:*' switch-group '<' '>'
 
 # User configuration
 
