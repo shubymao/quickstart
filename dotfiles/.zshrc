@@ -183,6 +183,10 @@ bindkey '^y' autosuggest-accept
 # control back space to delete a line
 bindkey '^H' backward-kill-line
 
+# scripts folder and tmux-sessionizer
+export PATH=$PATH:~/.local/scripts/
+bindkey -s ^f "tmux_sessionizer\n"
+
 # zoxide init
 eval "$(zoxide init zsh)"
  

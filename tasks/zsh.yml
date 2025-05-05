@@ -126,3 +126,16 @@
     - src: "../dotfiles/.p10k.zsh"
     - src: "../dotfiles/.aliases"
   tags: zsh
+- name: Ensure the script folder exists
+  ansible.builtin.file:
+    path: "~/.local/scripts"
+    state: directory
+    mode: '0755'
+- name: Copy scripts
+  copy:
+    src: "{{ item.src }}"
+    dest: "~/.local/scripts/"
+    mode: "0744"
+  loop: 
+    - src: "../scripts/tmux_sessionizer"
+  tags: zsh
