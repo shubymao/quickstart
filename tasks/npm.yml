@@ -37,25 +37,41 @@
     - nvm
     - npm
 - name: Print Installing Node
-  debug: msg="Installing latest node version"
   when: 
     - ansible_os_family == "Darwin" or ansible_os_family == "Debian"
   tags: 
     - nvm
     - npm
-- name: Install latest node and set version
+  debug: msg="Installing latest node version"
+
+- name: Install latest node and set version (macOS)
+  when: 
+    - ansible_os_family == "Darwin"
+  tags: 
+    - nvm 
+    - npm
   become: no
   shell: >
-    /bin/bash -c "source /home/{{ ansible_user_id }}/.nvm/nvm.sh && nvm install node"
+    /bin/bash -c "source /Users/{{ ansible_user_id }}/.nvm/nvm.sh && nvm install node"
     creates=/home/{{ ansible_user_id }}/.nvm/alias
-  when: 
-    - ansible_os_family == "Darwin" or ansible_os_family == "Debian"
   args:
     executable: /bin/bash
     chdir: "{{ ansible_env.HOME }}"
     creates: "{{ ansible_env.HOME }}/.nvm/versions/*"
+
+- name: Install latest node and set version (debian)
+  when: 
+    - ansible_os_family == "Debian"
   tags: 
     - nvm 
     - npm
+  become: no
+  shell: >
+    /bin/bash -c "source /home/{{ ansible_user_id }}/.nvm/nvm.sh && nvm install node"
+    creates=/home/{{ ansible_user_id }}/.nvm/alias
+  args:
+    executable: /bin/bash
+    chdir: "{{ ansible_env.HOME }}"
+    creates: "{{ ansible_env.HOME }}/.nvm/versions/*"
     
 
