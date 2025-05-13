@@ -619,8 +619,7 @@
                     "bundle_identifiers": [
                       "org.alacritty",
                       "com.googlecode.iterm2",
-                      "com.github.wez.wezterm",
-                      "com.facebook.fbvscode"
+                      "com.github.wez.wezterm"
                     ],
                     "description": "Terminal Applications",
                     "type": "frontmost_application_if"
@@ -657,8 +656,7 @@
                     "bundle_identifiers": [
                       "org.alacritty",
                       "com.googlecode.iterm2",
-                      "com.github.wez.wezterm",
-                      "com.facebook.fbvscode"
+                      "com.github.wez.wezterm"
                     ],
                     "description": "Terminal Application",
                     "type": "frontmost_application_if"
@@ -690,8 +688,7 @@
                     "bundle_identifiers": [
                       "org.alacritty",
                       "com.googlecode.iterm2",
-                      "com.github.wez.wezterm",
-                      "com.facebook.fbvscode"
+                      "com.github.wez.wezterm"
                     ],
                     "description": "Terminal Application",
                     "type": "frontmost_application_if"
@@ -728,8 +725,7 @@
                     "bundle_identifiers": [
                       "org.alacritty",
                       "com.googlecode.iterm2",
-                      "com.github.wez.wezterm",
-                      "com.facebook.fbvscode"
+                      "com.github.wez.wezterm"
                     ],
                     "type": "frontmost_application_if"
                   }
@@ -751,8 +747,7 @@
                     "bundle_identifiers": [
                       "org.alacritty",
                       "com.googlecode.iterm2",
-                      "com.github.wez.wezterm",
-                      "com.facebook.fbvscode"
+                      "com.github.wez.wezterm"
                     ],
                     "description": "",
                     "type": "frontmost_application_if"
