@@ -126,7 +126,7 @@ initial-size=(1904, 936)
 maximized=false
 
 [org/gnome/settings-daemon/plugins/media-keys]
-custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/PopLaunch1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/']
+custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/PopLaunch1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/']
 email=@as []
 terminal=['<Shift><Super>t']
 www=@as []
@@ -145,6 +145,11 @@ name='brave'
 binding='<Super>t'
 command='/home/shubymao/shortcuts/wezterm.sh'
 name='terminal'
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2]
+binding='<Super>c'
+command='brave-browser www.chatgpt.com'
+name='chatgpt'
 
 [org/gnome/settings-daemon/plugins/power]
 sleep-inactive-ac-timeout=1800
