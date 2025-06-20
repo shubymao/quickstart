@@ -66,10 +66,11 @@
 
 # Global Configuration Starts Here
 - name: Get first installed Node.js version from NVM
+  tags: zsh
   shell: |
     ls -1 {{ ansible_env.HOME }}/.nvm/versions/node | head -n 1
   register: node_version
-  changed_when: false
+  changed_when: true
 
 - name: Install "tldr" node.js package globally.
   tags: zsh

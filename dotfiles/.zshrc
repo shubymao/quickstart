@@ -70,7 +70,7 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # HIST_STAMPS="mm/dd/yyyy"
 
 # FZF config
-export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border --scrollbar --color scrollbar:red'
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
 
 # history setup
 HISTFILE=$HOME/.zhistory
@@ -101,11 +101,11 @@ plugins=(
 	golang
 	docker
 	docker-compose
+	zsh-syntax-highlighting
   zsh-autocomplete
   fzf-tab
   fzf
 	zsh-autosuggestions
-	zsh-syntax-highlighting
 )
 
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
