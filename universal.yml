@@ -24,8 +24,8 @@
       tags: terminal
     - include_tasks: tasks/tmux.yml
       tags: tmux
-    - include_tasks: tasks/obsidian.yml
-      tags: obsidian
+    # - include_tasks: tasks/obsidian.yml
+    #   tags: obsidian
     - include_tasks: tasks/karabiner-elements.yml
       tags: karabiner
     - include_tasks: tasks/browser.yml
@@ -34,5 +34,5 @@
       tags: tailscale
     - include_tasks: tasks/golang.yml
       tags: go
-    - include_tasks: tasks/cinnamon.yml
-      tags: cinnamon
+    # - include_tasks: tasks/cinnamon.yml
+    #   tags: cinnamon

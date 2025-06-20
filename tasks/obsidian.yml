@@ -15,14 +15,14 @@
     state: present
   tags:
     - obsidian
-- name: install i3 and related packages
-  become: true
-  when: ansible_os_family == "Debian"
-  ansible.builtin.apt:
-    name:
-      - ssh-askpass
-  tags:
-    - obsidian
+# - name: install i3 and related packages
+#   become: true
+#   when: ansible_os_family == "Debian"
+#   ansible.builtin.apt:
+#     name:
+#       - ssh-askpass
+#   tags:
+#     - obsidian
 - name: Ensure icon folder exists 
   become: true
   file:

@@ -1,39 +1,48 @@
 - name: Add floorp gpg key and repository
   when: ansible_os_family == "Debian"
   tags:
-    - floorp 
     - browser
   become: true
   block:
-    - name: floorp | apt key
-      ansible.builtin.get_url:
-        url: https://ppa.ablaze.one/KEY.gpg
-        dest: /usr/share/keyrings/Floorp.gpg
-
-    - name: floorp | apt repo
-      ansible.builtin.get_url:
-        url: https://ppa.ablaze.one/Floorp.list
-        dest: /etc/apt/sources.list.d/Floorp.list
-        mode: '0644'
-        force: yes
-        
-    - name: thorium | apt repo
-      ansible.builtin.get_url:
-        url: http://dl.thorium.rocks/debian/dists/stable/thorium.list
-        dest: /etc/apt/sources.list.d/thorium.list
-        mode: '0644'
-        force: yes
+    # - name: floorp | apt key
+    #   ansible.builtin.get_url:
+    #     url: https://ppa.ablaze.one/KEY.gpg
+    #     dest: /usr/share/keyrings/Floorp.gpg
+    #
+    # - name: floorp | apt repo
+    #   ansible.builtin.get_url:
+    #     url: https://ppa.ablaze.one/Floorp.list
+    #     dest: /etc/apt/sources.list.d/Floorp.list
+    #     mode: '0644'
+    #     force: yes
+    #
+    # - name: thorium | apt repo
+    #   ansible.builtin.get_url:
+    #     url: http://dl.thorium.rocks/debian/dists/stable/thorium.list
+    #     dest: /etc/apt/sources.list.d/thorium.list
+    #     mode: '0644'
+    #     force: yes
+    #
+    - name: setup brave gpg key
+      ansible.builtin.shell: |
+        curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main"| tee /etc/apt/sources.list.d/brave-browser-release.list
+      become: true
 
     - name: Update apt
-      apt:
+      ansible.builtin.apt:
         force_apt_get: true
         update_cache: true
         state: present
-    - name: Install thorium and floorp on debian
+      become: true
+        
+    - name: Install brave and firefox on debian
       ansible.builtin.apt:
         name:
-          - floorp
-          - thorium-browser
+          # - floorp
+          # - thorium-browser
+          - brave-browser
+          - firefox
         state: latest
 
 - name: Install firefox on macOS
