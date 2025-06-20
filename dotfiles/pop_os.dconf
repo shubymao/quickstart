@@ -37,6 +37,13 @@ apps=['com.github.donadigo.eddy.desktop', 'com.system76.Popsicle.desktop', 'guch
 name='Utilities'
 translate=true
 
+[org/gnome/desktop/background]
+color-shading-type='solid'
+picture-options='zoom'
+picture-uri-dark='file:///usr/share/backgrounds/pop/kate-hazen-COSMIC-desktop-wallpaper.png'
+primary-color='#000000'
+secondary-color='#000000'
+
 [org/gnome/desktop/input-sources]
 current=uint32 0
 mru-sources=[('xkb', 'us'), ('ibus', 'libbopomofo')]
@@ -51,13 +58,16 @@ font-hinting='slight'
 toolkit-accessibility=false
 
 [org/gnome/desktop/notifications]
-application-children=['firefox', 'org-gnome-terminal', 'gnome-control-center', 'io-elementary-appcenter', 'org-gnome-nautilus']
+application-children=['firefox', 'org-gnome-terminal', 'gnome-control-center', 'io-elementary-appcenter', 'org-gnome-nautilus', 'gnome-network-panel']
 
 [org/gnome/desktop/notifications/application/firefox]
 application-id='firefox.desktop'
 
 [org/gnome/desktop/notifications/application/gnome-control-center]
 application-id='gnome-control-center.desktop'
+
+[org/gnome/desktop/notifications/application/gnome-network-panel]
+application-id='gnome-network-panel.desktop'
 
 [org/gnome/desktop/notifications/application/io-elementary-appcenter]
 application-id='io.elementary.appcenter.desktop'
@@ -73,6 +83,13 @@ numlock-state=true
 
 [org/gnome/desktop/privacy]
 report-technical-problems=false
+
+[org/gnome/desktop/screensaver]
+color-shading-type='solid'
+picture-options='zoom'
+picture-uri='file:///usr/share/backgrounds/pop/kate-hazen-COSMIC-desktop-wallpaper.png'
+primary-color='#000000'
+secondary-color='#000000'
 
 [org/gnome/evolution-data-server]
 migrated=true
@@ -109,12 +126,25 @@ initial-size=(1904, 936)
 maximized=false
 
 [org/gnome/settings-daemon/plugins/media-keys]
+custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/PopLaunch1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/']
 email=@as []
+terminal=['<Shift><Super>t']
+www=@as []
 
 [org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/PopLaunch1]
 binding='Launch1'
 command='gnome-control-center wifi'
 name='WiFi'
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0]
+binding='<Super>b'
+command='/home/shubymao/shortcuts/brave.sh'
+name='brave'
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1]
+binding='<Super>t'
+command='/home/shubymao/shortcuts/wezterm.sh'
+name='terminal'
 
 [org/gnome/settings-daemon/plugins/power]
 sleep-inactive-ac-timeout=1800
@@ -123,6 +153,7 @@ sleep-inactive-battery-timeout=1800
 sleep-inactive-battery-type='suspend'
 
 [org/gnome/shell]
+app-picker-layout=[{'org.gnome.Geary.desktop': <{'position': <0>}>, 'org.gnome.Contacts.desktop': <{'position': <1>}>, 'org.gnome.Weather.desktop': <{'position': <2>}>, 'org.gnome.Calendar.desktop': <{'position': <3>}>, 'Pop-Utility': <{'position': <4>}>, 'org.gnome.Totem.desktop': <{'position': <5>}>, 'org.gnome.Calculator.desktop': <{'position': <6>}>, 'org.gnome.gedit.desktop': <{'position': <7>}>, 'simple-scan.desktop': <{'position': <8>}>, 'repoman.desktop': <{'position': <9>}>, 'gnome-system-monitor.desktop': <{'position': <10>}>, 'htop.desktop': <{'position': <11>}>, 'nvim.desktop': <{'position': <12>}>, 'obsidian.desktop': <{'position': <13>}>, 'org.gnome.tweaks.desktop': <{'position': <14>}>, 'yelp.desktop': <{'position': <15>}>, 'nm-connection-editor.desktop': <{'position': <16>}>, 'com.alacritty.Alacritty.desktop': <{'position': <17>}>, 'org.gnome.font-viewer.desktop': <{'position': <18>}>, 'org.gnome.FileRoller.desktop': <{'position': <19>}>, 'brave-browser.desktop': <{'position': <20>}>, 'gucharmap.desktop': <{'position': <21>}>}, {'org.gnome.baobab.desktop': <{'position': <0>}>, 'org.gnome.DiskUtility.desktop': <{'position': <1>}>, 'org.gnome.Evince.desktop': <{'position': <2>}>, 'com.github.donadigo.eddy.desktop': <{'position': <3>}>, 'org.gnome.Extensions.desktop': <{'position': <4>}>, 'org.gnome.eog.desktop': <{'position': <5>}>, 'gnome-language-selector.desktop': <{'position': <6>}>, 'libreoffice-startcenter.desktop': <{'position': <7>}>, 'libreoffice-calc.desktop': <{'position': <8>}>, 'libreoffice-draw.desktop': <{'position': <9>}>, 'libreoffice-impress.desktop': <{'position': <10>}>, 'libreoffice-math.desktop': <{'position': <11>}>, 'libreoffice-writer.desktop': <{'position': <12>}>, 'org.gnome.seahorse.Application.desktop': <{'position': <13>}>, 'com.system76.Popsicle.desktop': <{'position': <14>}>, 'org.gnome.PowerStats.desktop': <{'position': <15>}>, 'gnome-session-properties.desktop': <{'position': <16>}>, 'info.desktop': <{'position': <17>}>, 'org.wezfurlong.wezterm.desktop': <{'position': <18>}>}]
 disabled-extensions=@as []
 enabled-extensions=['ding@rastersoft.com', 'pop-cosmic@system76.com', 'pop-shell@system76.com', 'system76-power@system76.com', 'ubuntu-appindicators@ubuntu.com', 'cosmic-dock@system76.com', 'popx11gestures@system76.com', 'cosmic-workspaces@system76.com']
 favorite-apps=['pop-cosmic-launcher.desktop', 'pop-cosmic-workspaces.desktop', 'pop-cosmic-applications.desktop', 'org.wezfurlong.wezterm.desktop', 'com.alacritty.Alacritty.desktop', 'firefox.desktop', 'brave-browser.desktop', 'org.gnome.Nautilus.desktop', 'gnome-control-center.desktop']

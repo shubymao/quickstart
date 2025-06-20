@@ -34,5 +34,5 @@
       tags: tailscale
     - include_tasks: tasks/golang.yml
       tags: go
-    # - include_tasks: tasks/cinnamon.yml
-    #   tags: cinnamon
+    - include_tasks: tasks/wmctrl.yml
+      tags: wmctrl

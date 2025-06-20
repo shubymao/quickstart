@@ -1,19 +1,11 @@
-- name: Check if 'cinnamon' is a valid command
+- name: Install wmctrl shortcuts 
   when: ansible_os_family == "Debian"
   tags: 
-    - cinnamon
-  command: which cinnamon
-  register: cinnamon_check
-  ignore_errors: yes
-- name: Install wmctrl shortcuts 
-  when: ansible_os_family == "Debian" and cinnamon_check.rc == 0
-  tags: 
-    - cinnamon
+    - wmctrl
   vars:
     apps:
       - wezterm
-      - nemo
-      - floorp
+      - brave
     shortcuts_dir: "{{ lookup('env', 'HOME') }}/shortcuts"
   block:
     - name: Install wmctrl on debian
@@ -31,6 +23,6 @@
       loop_control:
         loop_var: app 
       copy:
-        src: "../dotfiles/cinnamon/{{app}}.sh"
+        src: "../dotfiles/wmctrl/{{app}}.sh"
         dest: "{{ lookup('env', 'HOME') }}/shortcuts/"
         mode: 0744
