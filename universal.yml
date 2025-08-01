@@ -13,7 +13,9 @@
     - include_tasks: tasks/git-setup.yml
       tags: git
     - include_tasks: tasks/ssh.yml
-      tags: ssh
+      tags:
+        - ssh
+        - server
     - include_tasks: tasks/npm.yml
       tags: npm
     - include_tasks: tasks/nvim.yml

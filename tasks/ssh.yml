@@ -5,6 +5,7 @@
     state: directory
   tags:
     - ssh
+    - server
 - name: Install ssh key
   copy:
     src: "{{ source_key }}"
@@ -19,6 +20,7 @@
     mode: 0644
   tags:
     - ssh
+    - server
 - name: Install ssh config
   copy:
     src: "../dotfiles/.ssh/config"
@@ -26,11 +28,13 @@
     mode: 0644
   tags:
     - ssh
+    - server
 - name: try print user and item
   debug: 
     msg: Adding ssh key to user "{{ ansible_user_id }}"
   tags:
     - ssh
+    - server
 - name: Set authorized key took from file
   authorized_key:
     user: "{{ ansible_user_id }}"
@@ -40,3 +44,4 @@
   - "{{ lookup('env', 'HOME') }}/.ssh/*.pub"
   tags: 
     - ssh
+    - server
