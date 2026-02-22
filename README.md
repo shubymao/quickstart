@@ -2,14 +2,27 @@
 # Shuby Mao's quickstart
 
 Quickly initialize key setup and environment in order to start being productive
+## Clone Repo
 
-## Install ansible-playbook
+```
+git clone https://github.com/shubymao/quickstart.git
+```
+
+To change the https to ssh version (to allow edit and pushing) run
+```
+git remote set-url origin git@github.com:shubymao/quickstart.git
+```
+
+
+## Inventory Node Setup 
+## Control Node Setup
+### Install ansible-playbook
 
 ```
 python3 -m pip install --user ansible
 ```
 
-## Add ansible to path
+### Add ansible to path
 
 ```
 export PATH=$PATH:/home/{your_user_name}/.local/bin
@@ -26,7 +39,3 @@ To run a particular tag use the -t command. E.g
 ansible-playbook -t nvim universal.yml
 ```
 
-To change the https to ssh version (to allow edit and pushing) run
-```
-git remote set-url origin git@github.com:shubymao/quickstart.git
-```
