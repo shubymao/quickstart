@@ -11,25 +11,40 @@
         - font 
         - fonts
     - include_tasks: tasks/git-setup.yml
-      tags: git
+      tags: 
+        - wsl 
+        - git
     - include_tasks: tasks/ssh.yml
       tags:
+        - wsl
         - ssh
         - server
     - include_tasks: tasks/npm.yml
-      tags: npm
+      tags: 
+        - wsl
+        - npm
     - include_tasks: tasks/nvim.yml
-      tags: nvim
+      tags: 
+        - wsl
+        - nvim
     - include_tasks: tasks/zsh.yml
-      tags: zsh
+      tags: 
+        - wsl
+        - zsh
     - include_tasks: tasks/terminal.yml
-      tags: terminal
+      tags: 
+        - terminal
+        - wsl
     - include_tasks: tasks/tmux.yml
-      tags: tmux
+      tags: 
+        - tmux
+        - wsl
     # - include_tasks: tasks/obsidian.yml
     #   tags: obsidian
     - include_tasks: tasks/karabiner-elements.yml
-      tags: karabiner
+      tags: 
+        - wsl
+        - karabiner
     - include_tasks: tasks/browser.yml
       tags: browser
     - include_tasks: tasks/tailscale.yml
