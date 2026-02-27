@@ -1,26 +1,40 @@
 - name: Ensure .ssh directory exists.
   file:
-    dest: "{{ dest_key | dirname }}"
+    dest: "{{ dest_ssh_pubkey | dirname }}"
     mode: 0700
     state: directory
   tags:
     - ssh
     - server
-- name: Install ssh key
-  copy:
-    src: "{{ source_key }}"
-    dest: "{{ dest_key }}"
-    mode: 0600
+
+- name: Resolve SSH public key value
+  set_fact:
+    ssh_authorized_key_value: "{{ bootstrap_pubkey | default(lookup('file', ssh_public_key_file), true) | trim }}"
   tags:
     - ssh
+    - server
+
+- name: Validate SSH public key format
+  assert:
+    that:
+      - ssh_authorized_key_value | length > 0
+      - ssh_authorized_key_value is match('^ssh-(ed25519|rsa|ecdsa-[^ ]+) [A-Za-z0-9+/=]+(?: .*)?$')
+    fail_msg: >-
+      No valid SSH public key detected. Set bootstrap_pubkey or update
+      {{ ssh_public_key_file }}.
+  tags:
+    - ssh
+    - server
+
 - name: Install ssh key public
   copy:
-    src: "{{ source_key }}.pub"
-    dest: "{{ dest_key }}.pub"
+    src: "{{ ssh_public_key_file }}"
+    dest: "{{ dest_ssh_pubkey }}"
     mode: 0644
   tags:
     - ssh
     - server
+
 - name: Install ssh config
   copy:
     src: "../dotfiles/.ssh/config"
@@ -39,9 +53,7 @@
   authorized_key:
     user: "{{ ansible_user_id }}"
     state: present
-    key: "{{ lookup('file', item) }}"
-  with_fileglob:
-  - "{{ lookup('env', 'HOME') }}/.ssh/*.pub"
+    key: "{{ ssh_authorized_key_value }}"
   tags: 
     - ssh
     - server

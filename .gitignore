@@ -1,1 +1,4 @@
 inventory.yml
+dotfiles/karabiner/log/
+dotfiles/karabiner/pid/
+dotfiles/karabiner/automatic_backups/

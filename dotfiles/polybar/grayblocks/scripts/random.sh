@@ -2,7 +2,6 @@
 
 # Color files
 PFILE="$HOME/.config/polybar/grayblocks/colors.ini"
-RFILE="$HOME/.config/polybar/grayblocks/scripts/rofi/colors.rasi"
 
 # Change colors
 change_color() {
@@ -15,20 +14,6 @@ change_color() {
 	sed -i -e 's/red = #.*/red = #EF5350/g' $PFILE
 	sed -i -e 's/yellow = #.*/yellow = #FFEE58/g' $PFILE
 	
-	# rofi
-	cat > $RFILE <<- EOF
-	/* colors */
-
-	* {
-	  al:   #00000000;
-	  bg:   ${BG}FF;
-	  bga:  ${BGA}FF;
-	  fga:  ${FG}FF;
-	  fg:   ${FG}FF;
-	  ac:   ${AC}FF;
-	}
-	EOF
-
 	polybar-msg cmd restart
 }
 

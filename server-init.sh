@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Ensure script is run as root
 if [ "$EUID" -ne 0 ]; then
@@ -7,6 +8,11 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 USERNAME="admin"
+HARDEN_SSH="false"
+
+if [[ "${1:-}" == "--harden-ssh" ]]; then
+  HARDEN_SSH="true"
+fi
 
 # 1. User and Home Directory Management
 if ! id "$USERNAME" &>/dev/null; then
@@ -59,10 +65,20 @@ AUTH_KEYS="$SSH_DIR/authorized_keys"
 mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 
+is_valid_pubkey() {
+  [[ "$1" =~ ^ssh-(ed25519|rsa|ecdsa-[^[:space:]]+)[[:space:]][A-Za-z0-9+/=]+([[:space:]].*)?$ ]]
+}
+
 # Check if authorized_keys is empty or missing
 if [ ! -f "$AUTH_KEYS" ] || [ ! -s "$AUTH_KEYS" ]; then
   echo "--- SSH Key Setup ---"
-  read -p "Paste your public SSH key (starting with ssh-rsa/ssh-ed25519): " NEW_KEY
+  while true; do
+    read -r -p "Paste your public SSH key (ssh-ed25519/ssh-rsa/ssh-ecdsa): " NEW_KEY
+    if is_valid_pubkey "$NEW_KEY"; then
+      break
+    fi
+    echo "Invalid SSH public key format. Try again."
+  done
 
   # Only add if the key isn't already in the file
   if ! grep -qF "$NEW_KEY" "$AUTH_KEYS" 2>/dev/null; then
@@ -79,29 +95,38 @@ if ! command -v sshd &>/dev/null; then
 fi
 systemctl enable --now ssh
 
-# 6. Bulletproof SSH Hardening
-echo "--- Hardening SSH Configuration ---"
-CONFIG_FILE="/etc/ssh/sshd_config"
-
-set_ssh_config() {
-  local key=$1
-  local value=$2
-  if grep -q "^#\?$key" "$CONFIG_FILE"; then
-    sed -i "s|^#\?$key.*|$key $value|" "$CONFIG_FILE"
-  else
-    echo "$key $value" >>"$CONFIG_FILE"
+# 6. Optional SSH hardening (run with --harden-ssh after key login is verified)
+if [[ "$HARDEN_SSH" == "true" ]]; then
+  if ! grep -Eq '^ssh-(ed25519|rsa|ecdsa-)' "$AUTH_KEYS"; then
+    echo "No valid SSH public key found in $AUTH_KEYS. Refusing to disable password login."
+    exit 1
   fi
-}
 
-set_ssh_config "PermitRootLogin" "no"
-set_ssh_config "PasswordAuthentication" "no"
-set_ssh_config "PubkeyAuthentication" "yes"
+  echo "--- Hardening SSH Configuration ---"
+  CONFIG_FILE="/etc/ssh/sshd_config"
 
-# Final Syntax Check
-if /usr/sbin/sshd -t; then
-  systemctl restart ssh
-  echo "Success! SSH is secured. Root and Password logins are DISABLED."
+  set_ssh_config() {
+    local key=$1
+    local value=$2
+    if grep -q "^#\?$key" "$CONFIG_FILE"; then
+      sed -i "s|^#\?$key.*|$key $value|" "$CONFIG_FILE"
+    else
+      echo "$key $value" >>"$CONFIG_FILE"
+    fi
+  }
+
+  set_ssh_config "PermitRootLogin" "no"
+  set_ssh_config "PasswordAuthentication" "no"
+  set_ssh_config "PubkeyAuthentication" "yes"
+
+  if /usr/sbin/sshd -t; then
+    systemctl restart ssh
+    echo "Success! SSH is secured. Root and password logins are disabled."
+  else
+    echo "Warning: SSH config has errors. Check $CONFIG_FILE manually."
+    exit 1
+  fi
 else
-  echo "Warning: SSH config has errors. Check $CONFIG_FILE manually."
-  exit 1
+  echo "SSH key bootstrap completed. Password auth is still enabled."
+  echo "After confirming key login works, rerun with --harden-ssh to disable password auth."
 fi

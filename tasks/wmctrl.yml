@@ -9,6 +9,7 @@
     shortcuts_dir: "{{ lookup('env', 'HOME') }}/shortcuts"
   block:
     - name: Install wmctrl on debian
+      become: true
       ansible.builtin.apt:
         name:
           - wmctrl

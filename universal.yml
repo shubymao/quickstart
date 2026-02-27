@@ -1,7 +1,7 @@
 - hosts: localhost
   vars:
-    source_key: "./keys/id_ed25519"
-    dest_key: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519"
+    ssh_public_key_file: "./keys/id_ed25519.pub"
+    dest_ssh_pubkey: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519.pub"
   pre_tasks:
     - include_tasks: tasks/update-repo.yml
       tags: all
@@ -39,8 +39,6 @@
       tags: 
         - tmux
         - wsl
-    # - include_tasks: tasks/obsidian.yml
-    #   tags: obsidian
     - include_tasks: tasks/karabiner-elements.yml
       tags: 
         - wsl

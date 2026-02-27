@@ -1,8 +1,0 @@
-[Desktop Entry]
-Version=1.0
-Name=Obsidian
-Comment=Obsidian, markdown vault to keep track of all your knowledge
-Exec=obsidian
-Icon=/usr/share/icons/obsidian.png
-Type=Application
-Categories=Application;

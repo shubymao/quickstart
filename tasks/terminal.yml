@@ -15,7 +15,7 @@
   become: true
   ansible.builtin.get_url:
     url: https://apt.fury.io/wez/gpg.key
-    dest: /usr/share/keyrings/wezterm-fury.gpg
+    dest: /usr/share/keyrings/wezterm-fury.asc
     mode: '0644'
   when: ansible_os_family == "Debian"
   tags:
@@ -24,8 +24,18 @@
 - name: Convert GPG key to dearmored format
   become: true
   ansible.builtin.command:
-    cmd: gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
-    stdin: "{{ lookup('file', '/usr/share/keyrings/wezterm-fury.gpg') }}"
+    cmd: gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg /usr/share/keyrings/wezterm-fury.asc
+  args:
+    creates: /usr/share/keyrings/wezterm-fury.gpg
+  when: ansible_os_family == "Debian"
+  tags:
+    - terminal
+
+- name: Remove temporary WezTerm ASCII key
+  become: true
+  ansible.builtin.file:
+    path: /usr/share/keyrings/wezterm-fury.asc
+    state: absent
   when: ansible_os_family == "Debian"
   tags:
     - terminal
@@ -104,12 +114,3 @@
   tags:
     - terminal
   when: ansible_os_family == "Darwin"
-
-# - name: Install iterm2 MacOS 
-#   when: ansible_os_family == "Darwin"
-#   homebrew:
-#     name: iterm2
-#     state: latest
-#     update_homebrew: true
-#   tags: terminal
-

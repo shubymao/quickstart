@@ -70,7 +70,7 @@
   shell: |
     ls -1 {{ ansible_env.HOME }}/.nvm/versions/node | head -n 1
   register: node_version
-  changed_when: true
+  changed_when: false
 
 - name: Install "tldr" node.js package globally.
   tags: zsh
@@ -80,10 +80,18 @@
   environment:
     PATH: "{{ ansible_env.HOME }}/.nvm/versions/node/{{ node_version.stdout }}/bin:{{ ansible_env.PATH }}"
 
+- name: Find zsh binary path
+  tags: zsh
+  shell: command -v zsh
+  register: zsh_path
+  changed_when: false
+
 - name: Change shell to zsh
   tags: zsh
-  shell: chsh -s $(which zsh)
   become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    shell: "{{ zsh_path.stdout }}"
 
 - name: Inform user that chsh require logout and log back in to take effect
   debug: msg="Updated zsh as default shell. chsh require logout and log back in to take effect"

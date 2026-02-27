@@ -15,8 +15,24 @@
 
 - name: Install karabiner-elements Config MacOs 
   when: ansible_os_family == "Darwin"
+  file:
+    path: "~/.config/karabiner"
+    state: directory
+    mode: "0755"
+  tags: karabiner
+
+- name: Install karabiner-elements main config MacOs 
+  when: ansible_os_family == "Darwin"
   copy:
-    src: "../dotfiles/karabiner"
-    dest: "~/.config/"
+    src: "../dotfiles/karabiner/karabiner.json"
+    dest: "~/.config/karabiner/karabiner.json"
+    mode: "0644"
+  tags: karabiner
+
+- name: Install karabiner complex modifications MacOs
+  when: ansible_os_family == "Darwin"
+  copy:
+    src: "../dotfiles/karabiner/assets/complex_modifications"
+    dest: "~/.config/karabiner/assets/"
     mode: "0644"
   tags: karabiner
