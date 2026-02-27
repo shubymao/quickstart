@@ -39,6 +39,39 @@ To run a particular tag use the -t command. E.g
 ansible-playbook -t nvim universal.yml
 ```
 
+## Windows Quick Setup
+
+From an elevated PowerShell (Run as Administrator), run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+.\windows-init.ps1
+```
+
+The script prompts at startup for:
+- `BaseOnly`: base apps only
+- `Dev`: base + dev tools
+
+`Base` apps are always installed regardless of profile.
+
+What this installs/configures:
+- Base: Firefox, Brave, 7-Zip, VLC, GIMP, PDFgear, Tailscale, Nextcloud, Jellyfin, LibreOffice
+- Dev: WezTerm, Alacritty, VS Code, WSL (default version 2 + Ubuntu distro), Joplin, AutoHotkey v2
+- WezTerm config from `dotfiles/wezterm/.wezterm.lua` to `%USERPROFILE%\.wezterm.lua` (Dev profile)
+- Startup shortcut for `dotfiles/main.ahk` (Dev profile)
+- Copies `wallpapers/*` to `%USERPROFILE%\Pictures\quickstart-wallpapers`
+- Sets desktop wallpaper to slideshow from that folder
+- Tries to set lock screen image to the first wallpaper file
+- Sets Windows apps/system theme to dark
+- Adds Desktop shortcuts for File Explorer, PowerShell, WezTerm, Alacritty, Snipping Tool, Calculator, and Browser
+- Tries to pin the same apps to the taskbar
+
+Optional distro override:
+
+```powershell
+.\windows-init.ps1 -WslDistro "Ubuntu-24.04"
+```
+
 ## SSH Setup (Personal Multi-Server Flow)
 
 This repo now installs only public keys. It does not copy a private key to target machines.
