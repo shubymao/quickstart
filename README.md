@@ -56,6 +56,7 @@ The script prompts at startup for:
 
 What this installs/configures:
 - Base: Firefox, Brave, 7-Zip, VLC, GIMP, PDFgear, Tailscale, Nextcloud, Jellyfin, LibreOffice
+- Nerd Fonts (latest release): Meslo, FiraCode, SourceCodePro
 - Dev: WezTerm, Alacritty, VS Code, WSL (default version 2 + Ubuntu distro), Joplin, AutoHotkey v2
 - WezTerm config from `dotfiles/wezterm/.wezterm.lua` to `%USERPROFILE%\.wezterm.lua` (Dev profile)
 - Startup shortcut for `dotfiles/main.ahk` (Dev profile)
@@ -71,6 +72,61 @@ Optional distro override:
 ```powershell
 .\windows-init.ps1 -WslDistro "Ubuntu-24.04"
 ```
+
+## Fedora Desktop Quick Setup
+
+Run from your normal user (the script uses `sudo` for package installs):
+
+```bash
+chmod +x ./fedora-init.sh
+./fedora-init.sh
+```
+
+The script prompts at startup for:
+- `BaseOnly`: base apps only
+- `Dev`: base + dev tools
+
+What this installs/configures:
+- Base apps: Firefox, VLC, GIMP, LibreOffice, Nextcloud client, Tailscale, 7zip tools, Evince
+- Nerd Fonts (latest release): Meslo, FiraCode, SourceCodePro
+- Base Flatpak apps: Jellyfin Media Player
+- Dev apps: WezTerm, Alacritty, keyd (for key remapping)
+- Dev Flatpak apps: VS Code, Joplin, Proton VPN, VirtualBox (when available on Flathub)
+- WezTerm config from `dotfiles/wezterm/.wezterm.lua` to `~/.wezterm.lua` (Dev profile)
+- Copies `wallpapers/*` to `~/Pictures/quickstart-wallpapers`
+- Sets GNOME wallpaper to the first copied image
+- Adds app launchers to GNOME favorites (taskbar/dock)
+- Sets GNOME custom hotkeys (Dev profile):
+  - `Ctrl+Alt+T`: terminal (Alacritty if installed)
+  - `Ctrl+Alt+B`: open browser
+- Sets key remapping with `keyd` (Dev profile):
+  - `CapsLock -> Esc`
+  - `RightAlt + H/J/K/L` as arrow keys
+
+## Universal Terminal Setup (Ubuntu/Fedora/macOS)
+
+Use one entry script that dispatches to OS-specific setup:
+
+```bash
+chmod +x ./universal.sh
+./universal.sh
+```
+
+What it sets up:
+- Installs terminal/editor tools with the correct package manager per OS:
+  - Ubuntu: `apt`
+  - Fedora: `dnf`
+  - macOS: installs Homebrew if missing, then uses `brew`
+- Installs: `fish`, `neovim`, `vim` (backup), `node/npm`, and OpenAI Codex (`@openai/codex`)
+- Installs aliases:
+  - Copies `dotfiles/.aliases` to `~/.aliases`
+  - Ensures `~/.bashrc` and `~/.zshrc` source `~/.aliases`
+  - Creates fish aliases at `~/.config/fish/conf.d/quickstart_aliases.fish`
+
+OS-specific scripts:
+- `scripts/terminal-setup-ubuntu.sh`
+- `scripts/terminal-setup-fedora.sh`
+- `scripts/terminal-setup-macos.sh`
 
 ## SSH Setup (Personal Multi-Server Flow)
 

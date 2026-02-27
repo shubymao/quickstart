@@ -82,6 +82,69 @@ function Install-WezTermConfig {
     Write-Step "Installed WezTerm config to $target"
 }
 
+function Install-NerdFonts {
+    param([string]$RepoRoot)
+
+    $fontPacks = @("Meslo", "FiraCode", "SourceCodePro")
+    $releaseApi = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
+
+    Write-Step "Installing Nerd Fonts from latest release: $($fontPacks -join ', ')"
+
+    try {
+        $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ "User-Agent" = "quickstart-windows-init" }
+    } catch {
+        throw "Failed to query Nerd Fonts latest release: $($_.Exception.Message)"
+    }
+
+    $tempRoot = Join-Path $env:TEMP "quickstart-nerd-fonts"
+    New-Item -Path $tempRoot -ItemType Directory -Force | Out-Null
+
+    $shell = New-Object -ComObject Shell.Application
+    $fontsNamespace = $shell.Namespace(0x14)
+    if (-not $fontsNamespace) {
+        throw "Unable to access Windows Fonts shell namespace."
+    }
+
+    foreach ($fontPack in $fontPacks) {
+        $assetName = "$fontPack.zip"
+        $asset = $release.assets | Where-Object { $_.name -ieq $assetName } | Select-Object -First 1
+        if (-not $asset) {
+            Write-Step "Skipping font pack '$fontPack': asset '$assetName' not found in release $($release.tag_name)"
+            continue
+        }
+
+        $zipPath = Join-Path $tempRoot $asset.name
+        $extractDir = Join-Path $tempRoot "$fontPack-$($release.tag_name)"
+        if (Test-Path $extractDir) {
+            Remove-Item -Path $extractDir -Recurse -Force
+        }
+
+        Write-Step "Downloading font pack: $assetName"
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
+        Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+
+        $fontFiles = Get-ChildItem -Path $extractDir -Recurse -File | Where-Object {
+            $_.Extension -in @(".ttf", ".otf")
+        }
+        if (-not $fontFiles) {
+            Write-Step "No font files found in $assetName"
+            continue
+        }
+
+        foreach ($fontFile in $fontFiles) {
+            $installedPath = Join-Path $env:WINDIR "Fonts\$($fontFile.Name)"
+            if (Test-Path $installedPath) {
+                continue
+            }
+
+            Write-Step "Installing font file: $($fontFile.Name)"
+            $fontsNamespace.CopyHere($fontFile.FullName, 16)
+        }
+    }
+
+    Write-Step "Nerd Font installation completed."
+}
+
 function Resolve-AutoHotkeyExe {
     $candidates = @(
         "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe",
@@ -317,10 +380,19 @@ function Configure-AppShortcuts {
         @{
             Name = "Browser"
             Path = Resolve-AppPath -Candidates @(
+                "C:\Program Files\Google\Chrome\Application\chrome.exe",
                 "C:\Program Files\Mozilla Firefox\firefox.exe",
                 "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+                "chrome.exe",
                 "firefox.exe",
                 "brave.exe"
+            ) -AllowCommandName
+        },
+        @{
+            Name = "Google Chrome"
+            Path = Resolve-AppPath -Candidates @(
+                "C:\Program Files\Google\Chrome\Application\chrome.exe",
+                "chrome.exe"
             ) -AllowCommandName
         }
     )
@@ -356,6 +428,7 @@ $isDevProfile = $InstallProfile -eq "Dev"
 $appGroups = @{
     Base = @(
         "Mozilla.Firefox",
+        "Google.Chrome",
         "Brave.Brave",
         "7zip.7zip",
         "VideoLAN.VLC",
@@ -387,6 +460,8 @@ Write-Step "Installing app packages for profile: $InstallProfile"
 foreach ($id in $installIds) {
     Install-WingetPackage -Id $id
 }
+
+Install-NerdFonts -RepoRoot $repoRoot
 
 if ($isDevProfile) {
     Require-Command -Name "wsl"
