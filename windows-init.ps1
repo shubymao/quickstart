@@ -74,23 +74,48 @@ function Apply-AllSettings {
     if (Test-Path $sourceDir) {
         $picturesDir = [Environment]::GetFolderPath("MyPictures")
         $targetDir = Join-Path $picturesDir "quickstart-wallpapers"
-        New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
         
-        $copied = Get-ChildItem -Path $sourceDir -File | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination (Join-Path $targetDir $_.Name) -Force
-            Join-Path $targetDir $_.Name
+        if (-not (Test-Path $targetDir)) {
+            New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
+        }
+        
+        $copiedFiles = Get-ChildItem -Path $sourceDir -File | ForEach-Object {
+            $dest = Join-Path $targetDir $_.Name
+            Copy-Item -Path $_.FullName -Destination $dest -Force
+            $dest
         }
 
+        # Set Registry for Slideshow
+        $wpReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
+        Set-ItemProperty -Path $wpReg -Name "BackgroundType" -Value 2 # 2 = Slideshow
         Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Interval" -Value 600000
         Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Shuffle" -Value 1
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers" -Name "BackgroundType" -Value 2
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers" -Name "ImagesRootPath" -Value $targetDir
         
+        # This is the "Magic" string Windows needs for the directory path in some versions
+        Set-ItemProperty -Path $wpReg -Name "ImagesRootPath" -Value $targetDir
+
+        # FORCE REFRESH: Use C# to call SystemParametersInfo
+        $code = @'
+using System.Runtime.InteropServices;
+public class Wallpaper {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+    public const int SPI_SETDESKWALLPAPER = 20;
+    public const int SPIF_UPDATEINIFILE = 0x01;
+    public const int SPIF_SENDWININICHANGE = 0x02;
+}
+'@
+        Add-Type -TypeDefinition $code
+        
+        # Set the first image as static wallpaper immediately to force an update
+        if ($copiedFiles.Count -gt 0) {
+            [Wallpaper]::SystemParametersInfo([Wallpaper]::SPI_SETDESKWALLPAPER, 0, $copiedFiles[0], 3)
+        }
+
+        # 2b. Lock Screen (Applied via HKLM, needs Admin which you already have)
         $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
-        New-Item -Path $policyKey -Force | Out-Null
-        Set-ItemProperty -Path $policyKey -Name "LockScreenImage" -Value $copied[0]
-        
-        Start-Process -FilePath "RUNDLL32.EXE" -ArgumentList "USER32.DLL,UpdatePerUserSystemParameters 1, True" -WindowStyle Hidden
+        if (-not (Test-Path $policyKey)) { New-Item -Path $policyKey -Force | Out-Null }
+        Set-ItemProperty -Path $policyKey -Name "LockScreenImage" -Value $copiedFiles[0]
     }
 
     # 3. Touch Keyboard Scaling
