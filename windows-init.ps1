@@ -1,7 +1,7 @@
 param(
     [string]$WslDistro = "Ubuntu",
     [string]$RepoCloneDir = "", 
-    [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly", "Dev")]
+    [ValidateSet("SettingsOnly", "BaseOnly", "Dev")]
     [string]$InstallProfile,
     [switch]$NoExitPrompt,
     [string]$OriginalUserPath = $HOME
@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 $RepoUrl = "https://github.com/shubymao/quickstart"
 
 # --- UI & Logging ---
-function Write-Step { param([string]$Message) Write-Host "[quickstart] $Message" -ForegroundColor Cyan }
+function Write-Step { param([string]$Message) Write-Host "`n[quickstart] $Message" -ForegroundColor Cyan }
 function Write-Failure { param([string]$Message) Write-Host "[quickstart] $Message" -ForegroundColor Red }
 
 # --- Admin Elevation (The Handshake) ---
@@ -39,22 +39,24 @@ function Ensure-Admin {
     exit 0
 }
 
-# --- User Context Bridge ---
+# --- User Context Bridge (Crucial for Non-Admin Apps like Flow Launcher) ---
 function Run-AsUser {
     param([string]$ScriptContent, [string]$TaskName = "QuickstartUserTask")
-    $TriggerScript = Join-Path $env:TEMP "$TaskName.ps1"
+    
+    $SanitizedTaskName = $TaskName -replace '[.\-]', '_'
+    $TriggerScript = Join-Path $env:TEMP "$SanitizedTaskName.ps1"
     $ScriptContent | Out-File -FilePath $TriggerScript -Encoding utf8
 
     $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
     $Action = New-ScheduledTaskAction -Execute 'Powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$TriggerScript`""
     $Principal = New-ScheduledTaskPrincipal -UserId $UserAccount -LogonType Interactive
     
-    Register-ScheduledTask -TaskName $TaskName -Action $Action -Principal $Principal -Force | Out-Null
-    Start-ScheduledTask -TaskName $TaskName
+    Register-ScheduledTask -TaskName $SanitizedTaskName -Action $Action -Principal $Principal -Force | Out-Null
+    Start-ScheduledTask -TaskName $SanitizedTaskName
     
-    while ((Get-ScheduledTask -TaskName $TaskName).State -eq "Running") { Start-Sleep -Seconds 2 }
+    while ((Get-ScheduledTask -TaskName $SanitizedTaskName).State -eq "Running") { Start-Sleep -Seconds 2 }
     
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+    Unregister-ScheduledTask -TaskName $SanitizedTaskName -Confirm:$false
     if (Test-Path $TriggerScript) { Remove-Item $TriggerScript -Force }
 }
 
@@ -72,9 +74,9 @@ function Install-WingetPackage {
         Write-Step "Installing System-Wide: $Id..."
         winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine
     } else {
-        Write-Step "Installing for User ($OriginalUserPath): $Id..."
+        Write-Step "Installing for User (Non-Admin): $Id..."
         $UserWingetScript = "winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope user"
-        Run-AsUser -ScriptContent $UserWingetScript -TaskName "Install-$($Id -replace '\.', '_')"
+        Run-AsUser -ScriptContent $UserWingetScript -TaskName "Install_$Id"
     }
 }
 
@@ -150,13 +152,14 @@ function Register-DevConfigs {
         if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
         Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
         
+        $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
         $Acl = Get-Acl $flowDestDir
-        $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule((Get-CimInstance Win32_ComputerSystem).UserName, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+        $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule($UserAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
         $Acl.SetAccessRule($Ar)
         Set-Acl $flowDestDir $Acl
     }
 
-    # AutoHotkey (Actual File to Startup)
+    # AutoHotkey
     $ahkSource = Join-Path $RepoRoot "dotfiles\main.ahk"
     if (Test-Path $ahkSource) {
         $startupDir = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
@@ -176,7 +179,7 @@ function Invoke-WindowsInit {
     if (-not (Test-Path $RepoCloneDir)) { git clone --depth 1 $RepoUrl $RepoCloneDir }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
-    # 2. Complete App Inventories
+    # 2. App Lists
     $SystemApps = @(
         "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", 
         "VideoLAN.VLC", "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale", 
@@ -186,17 +189,21 @@ function Invoke-WindowsInit {
     )
     
     $UserApps = @(
-        "Flow-Launcher.Flow-Launcher", "Joplin.Joplin", 
-        "Microsoft.VisualStudioCode", "wez.wezterm", "Alacritty.Alacritty",
+        "Flow-Launcher.Flow-Launcher", 
+        "Joplin.Joplin", 
+        "Microsoft.VisualStudioCode", 
+        "wez.wezterm", 
+        "Alacritty.Alacritty",
         "AutoHotkey.AutoHotkey"
     )
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile (User: $OriginalUserPath):`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full)" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
         $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
     }
 
+    # 3. Process Profile
     switch ($InstallProfile) {
         "Dev" {
             Apply-AllSettings -RepoRoot $repoRoot
@@ -210,6 +217,9 @@ function Invoke-WindowsInit {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
             Configure-TaskbarLinks -Profile "BaseOnly"
+        }
+        "SettingsOnly" {
+            Apply-AllSettings -RepoRoot $repoRoot
         }
     }
 
