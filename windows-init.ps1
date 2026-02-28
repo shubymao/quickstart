@@ -49,14 +49,35 @@ function Refresh-ProcessPath {
 # --- Installation Core ---
 function Install-WingetPackage {
     param([string]$Id)
+    # 1. Skip if already installed
     $existing = winget list --exact --id $Id --accept-source-agreements 2>$null
     if ($LASTEXITCODE -eq 0 -and $existing -match [regex]::Escape($Id)) {
         Write-Step "Already installed: $Id"
         return
     }
-    Write-Step "Installing: $Id"
-    # Added scope and source flags to prevent common hangs
-    winget install --id $Id --silent --accept-package-agreements --accept-source-agreements --include-unknown --scope machine
+
+    Write-Step "Installing: $Id..."
+
+    # 2. First Attempt: Try with Machine Scope (Standard for Admin scripts)
+    $args = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine"
+    $process = Start-Process winget -ArgumentList $args -Wait -PassThru -NoNewWindow
+    
+    # 3. Fallback: If it failed (likely due to No Applicable Installer/Scope issues)
+    if ($process.ExitCode -ne 0) {
+        Write-Warning "Machine scope failed for $Id (Code: $($process.ExitCode)). Retrying without scope restriction..."
+        
+        # Try again without specifying scope, letting Winget/Installer decide
+        $fallbackArgs = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements"
+        $fallbackProcess = Start-Process winget -ArgumentList $fallbackArgs -Wait -PassThru -NoNewWindow
+        
+        if ($fallbackProcess.ExitCode -ne 0) {
+            Write-Failure "Failed to install $Id after fallback. Check architecture or manual logs."
+        } else {
+            Write-Host "    Successfully installed $Id via fallback." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "    Successfully installed $Id (Machine)." -ForegroundColor Green
+    }
 }
 
 # --- Settings & Personalization ---
