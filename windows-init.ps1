@@ -172,31 +172,13 @@ function Install-WezTermConfig {
 }
 
 function Get-RepoAssetsRoot {
-    param(
-        [string]$RepoUrl,
-        [string]$Branch
-    )
+    param([string]$RepoRoot)
 
-    $zipUrl = "$RepoUrl/archive/refs/heads/$Branch.zip"
-    $tempRoot = Join-Path $env:TEMP "quickstart-assets"
-    $zipPath = Join-Path $tempRoot "quickstart.zip"
-    $extractDir = Join-Path $tempRoot "repo"
-
-    if (Test-Path $extractDir) {
-        Remove-Item -Path $extractDir -Recurse -Force
-    }
-    New-Item -Path $extractDir -ItemType Directory -Force | Out-Null
-
-    Write-Step "Downloading assets from $RepoUrl ($Branch)"
-    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
-    Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
-
-    $repoRoot = Get-ChildItem -Path $extractDir -Directory | Select-Object -First 1
-    if (-not $repoRoot) {
-        throw "Failed to extract repo assets from $zipUrl"
+    if (-not (Test-Path $RepoRoot)) {
+        throw "Repo root not found: $RepoRoot"
     }
 
-    return $repoRoot.FullName
+    return (Resolve-Path $RepoRoot).Path
 }
 
 function Install-NerdFonts {
@@ -569,8 +551,8 @@ function Invoke-WindowsInit {
     Ensure-GitInstalled
     Clone-Repo -RepoUrl $RepoUrl -Branch $RepoBranch -Destination $RepoCloneDir
 
-    Write-Step "Preparing standalone assets"
-    $repoRoot = Get-RepoAssetsRoot -RepoUrl $RepoUrl -Branch $RepoBranch
+    Write-Step "Preparing assets from cloned repo"
+    $repoRoot = Get-RepoAssetsRoot -RepoRoot $RepoCloneDir
     $InstallProfile = Get-InstallProfile
     $isDevProfile = $InstallProfile -eq "Dev"
     $InstallMode = Get-InstallMode
