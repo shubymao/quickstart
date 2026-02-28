@@ -5,6 +5,9 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$RepoUrl = "https://github.com/shubymao/quickstart"
+$RepoBranch = "main"
+
 function Write-Step {
     param([string]$Message)
     Write-Host "[quickstart] $Message" -ForegroundColor Cyan
@@ -14,6 +17,31 @@ function Test-IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Ensure-Admin {
+    if (Test-IsAdmin) {
+        return
+    }
+
+    if (-not $PSCommandPath) {
+        throw "Administrator privileges are required. Please rerun this script from an elevated PowerShell session."
+    }
+
+    Write-Step "Requesting administrator privileges..."
+    $hostExe = (Get-Process -Id $PID).Path
+    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
+    if ($PSBoundParameters.ContainsKey("WslDistro")) {
+        $arguments += @("-WslDistro", $WslDistro)
+    }
+
+    try {
+        Start-Process -FilePath $hostExe -ArgumentList $arguments -Verb RunAs | Out-Null
+    } catch {
+        throw "Administrator privileges are required. Rerun this script and approve the UAC prompt."
+    }
+
+    exit 0
 }
 
 function Require-Command {
@@ -50,6 +78,20 @@ function Get-InstallProfile {
     return "BaseOnly"
 }
 
+function Get-InstallMode {
+    Write-Host ""
+    Write-Host "Choose install mode:"
+    Write-Host "1) Serial (recommended, most reliable)"
+    Write-Host "2) Parallel (faster, may fail on some installers)"
+    $choice = Read-Host "Enter choice [1/2]"
+
+    if ($choice -eq "2") {
+        return "Parallel"
+    }
+
+    return "Serial"
+}
+
 function Ensure-WslInstalled {
     param([string]$Distro)
 
@@ -80,6 +122,34 @@ function Install-WezTermConfig {
     $target = Join-Path $HOME ".wezterm.lua"
     Copy-Item -Path $source -Destination $target -Force
     Write-Step "Installed WezTerm config to $target"
+}
+
+function Get-RepoAssetsRoot {
+    param(
+        [string]$RepoUrl,
+        [string]$Branch
+    )
+
+    $zipUrl = "$RepoUrl/archive/refs/heads/$Branch.zip"
+    $tempRoot = Join-Path $env:TEMP "quickstart-assets"
+    $zipPath = Join-Path $tempRoot "quickstart.zip"
+    $extractDir = Join-Path $tempRoot "repo"
+
+    if (Test-Path $extractDir) {
+        Remove-Item -Path $extractDir -Recurse -Force
+    }
+    New-Item -Path $extractDir -ItemType Directory -Force | Out-Null
+
+    Write-Step "Downloading assets from $RepoUrl ($Branch)"
+    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+    Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+
+    $repoRoot = Get-ChildItem -Path $extractDir -Directory | Select-Object -First 1
+    if (-not $repoRoot) {
+        throw "Failed to extract repo assets from $zipUrl"
+    }
+
+    return $repoRoot.FullName
 }
 
 function Install-NerdFonts {
@@ -262,6 +332,25 @@ function Set-WindowsDarkTheme {
     Write-Step "Configured Windows dark theme (apps + system)"
 }
 
+function Enable-TouchKeyboardLargest {
+    $tabletTipKey = "HKCU:\Software\Microsoft\TabletTip\1.7"
+    New-Item -Path $tabletTipKey -Force | Out-Null
+    Set-ItemProperty -Path $tabletTipKey -Name "UserKeyboardScalingFactor" -Type DWord -Value 200
+    Write-Step "Set touch keyboard size to largest"
+
+    try {
+        Set-Service -Name "TabletInputService" -StartupType Automatic -ErrorAction Stop
+        if ((Get-Service -Name "TabletInputService").Status -ne "Running") {
+            Start-Service -Name "TabletInputService"
+        } else {
+            Restart-Service -Name "TabletInputService" -Force
+        }
+        Write-Step "Touch Keyboard service is running"
+    } catch {
+        Write-Step "Touch Keyboard service update skipped: $($_.Exception.Message)"
+    }
+}
+
 function Resolve-AppPath {
     param(
         [string[]]$Candidates,
@@ -416,14 +505,16 @@ function Configure-AppShortcuts {
     }
 }
 
-if (-not (Test-IsAdmin)) {
-    throw "Please run this script from an elevated PowerShell session (Run as Administrator)."
-}
+Ensure-Admin
 
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+Ensure-Admin
+
+Write-Step "Preparing standalone assets"
+$repoRoot = Get-RepoAssetsRoot -RepoUrl $RepoUrl -Branch $RepoBranch
 Require-Command -Name "winget"
 $InstallProfile = Get-InstallProfile
 $isDevProfile = $InstallProfile -eq "Dev"
+$InstallMode = Get-InstallMode
 
 $appGroups = @{
     Base = @(
@@ -457,8 +548,23 @@ if ($isDevProfile) {
 }
 
 Write-Step "Installing app packages for profile: $InstallProfile"
-foreach ($id in $installIds) {
-    Install-WingetPackage -Id $id
+if ($InstallMode -eq "Parallel") {
+    if ($PSVersionTable.PSVersion.Major -lt 7) {
+        Write-Step "Parallel install requires PowerShell 7+. Falling back to serial mode."
+        foreach ($id in $installIds) {
+            Install-WingetPackage -Id $id
+        }
+    } else {
+        Write-Step "Running winget installs in parallel (throttle=3)"
+        $installFunc = ${function:Install-WingetPackage}
+        @($installIds) | ForEach-Object -Parallel {
+            & $using:installFunc -Id $_
+        } -ThrottleLimit 3
+    }
+} else {
+    foreach ($id in $installIds) {
+        Install-WingetPackage -Id $id
+    }
 }
 
 Install-NerdFonts -RepoRoot $repoRoot
@@ -478,6 +584,7 @@ try {
     Write-Step "Lock screen policy was not set: $($_.Exception.Message)"
 }
 Set-WindowsDarkTheme
+Enable-TouchKeyboardLargest
 Configure-AppShortcuts
 
 Write-Step "Windows bootstrap completed."
