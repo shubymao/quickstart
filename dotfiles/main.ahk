@@ -3,35 +3,51 @@
 #SingleInstance Force
 
 ; --- 1. WSL WARM-UP ---
-; This runs silently in the background when the script starts (at Windows login)
-; to ensure your terminal opens instantly later.
 Run("wsl.exe --exec true", , "Hide")
 
 ; --- 2. GLOBAL SETTINGS ---
 SetWorkingDir(A_InitialWorkingDir)
 
 ; --- 3. VIRTUAL DESKTOP ACCESSOR ---
-dllPath := "C:\Users\" . A_UserName . "\Documents\AutoHotkey\Lib\VirtualDesktopAccessor.dll"
+; Updated to check both Documents and Repo location
+dllPath := A_MyDocuments . "\AutoHotkey\Lib\VirtualDesktopAccessor.dll"
 
 try {
     vda := DllCall("LoadLibrary", "Str", dllPath, "Ptr")
-    if !vda {
-        throw Error("DLL not found at: " . dllPath)
-    }
-} catch as e {
-    ToolTip("VirtualDesktopAccessor.dll failed to load.`n" . e.Message)
-    SetTimer(() => ToolTip(), -5000)
+} catch {
     vda := 0
 }
 
 GoToDesktopNumber(num) {
-    if !vda {
-        return
-    }
-    DllCall("VirtualDesktopAccessor\GoToDesktopNumber", "Int", num - 1, "Int")
+    if vda
+        DllCall("VirtualDesktopAccessor\GoToDesktopNumber", "Int", num - 1, "Int")
 }
 
-; --- 4. HYPER KEY SHORTCUTS (^!+# = Ctrl+Shift+Alt+Win) ---
+; --- 4. DYNAMIC VS CODE PATH FINDER ---
+; This looks in User Local, User Roaming, and System Program Files
+GetVSCodePath() {
+    paths := [
+        A_AppData . "\Local\Programs\Microsoft VS Code\Code.exe",
+        A_AppData . "\Roaming\Microsoft\Windows\Start Menu\Programs\Microsoft VS Code\Code.exe",
+        "C:\Program Files\Microsoft VS Code\Code.exe",
+        "C:\Program Files (x86)\Microsoft VS Code\Code.exe"
+    ]
+    
+    for path in paths {
+        if FileExist(path)
+            return path
+    }
+    return "Code.exe" ; Fallback to PATH
+}
+
+; --- 5. COPILOT / OFFICE KEY KILLER ---
+; The Copilot key fires Shift+Ctrl+Alt+Win+F23 (or similar). 
+; This block catches the "Office" protocol to prevent it from opening the app.
+#<^<+<!vk07:: {
+    return ; Do nothing, effectively freeing the key for your Hyper shortcuts
+}
+
+; --- 6. HYPER KEY SHORTCUTS (^!+# = Ctrl+Shift+Alt+Win) ---
 
 ; Desktop Navigation
 ^!+#1:: GoToDesktopNumber(1)
@@ -52,7 +68,7 @@ GoToDesktopNumber(num) {
 ^!+#k:: SnapWindow("Up")
 ^!+#;:: MoveWindowToNextMonitor()
 ^!+#m:: {
-    if WinGetMinMax("A") = 1 ; If already maximized
+    if WinGetMinMax("A") = 1
         WinRestore("A")
     else
         WinMaximize("A")
@@ -63,47 +79,37 @@ GoToDesktopNumber(num) {
     hWnd := WinActive("A")
     if !hWnd
         return
-
     winClass := WinGetClass("ahk_id " hWnd)
     winList := WinGetList("ahk_class " winClass)
-    
-    if (winList.Length > 1) {
-        ; Activate the bottom-most window of the stack to cycle
+    if (winList.Length > 1)
         WinActivate("ahk_id " winList[winList.Length])
-    }
 }
 
 ; App Launching / Focusing
 ^!+#e:: Run("explorer.exe")
 ^!+#f:: runFocusOrStart("C:\Program Files\WezTerm\wezterm-gui.exe", "wezterm-gui.exe")
 ^!+#a:: runFocusOrStart("C:\Program Files\Mozilla Firefox\firefox.exe", "firefox.exe")
-^!+#s:: runFocusOrStart("C:\Users\" . A_UserName . "\AppData\Local\Programs\Microsoft VS Code\Code.exe", "Code.exe")
+^!+#s:: {
+    codePath := GetVSCodePath()
+    runFocusOrStart(codePath, "Code.exe")
+}
 
 ; Special Logic: Edit this Script in VS Code
 ^!+#w:: {
-    ahkPath := "C:\Users\" . A_UserName . "\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk"
-    codePath := "C:\Users\" . A_UserName . "\AppData\Local\Programs\Microsoft VS Code\Code.exe"
+    ahkPath := A_AppData . "\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk"
+    codePath := GetVSCodePath()
     Run(codePath . ' "' . ahkPath . '"')
 }
 
+; Shortcuts
+^!+#Space:: Send("!{Space}")
+^!+#c:: Send("!{Space}cb{Space}")
+^!+#d:: Send("#{d}")     ; Win + D
+^!+#q:: Send("!{F4}")    ; Alt + F4
+^!+#r:: Reload()         ; Reload Script
+^!+#`:: Run("C:\Users\" . A_UserName . "\Scripts\toggle_touch.cmd")
 
-; Your exact path - Note the 'app-2.0.3' subfolder
-; Map Hyper Key (Ctrl+Alt+Shift+Win) + Space
-^!+#Space::
-{
-    Send("!{Space}")
-}
-^!+#c::
-{
-    Send("!{Space}cb{Space}")
-}
-^!+#d::     Send("#{d}")     ; Win + D
-^!+#q::     Send("!{F4}")    ; Alt + F4
-^!+#r::     Reload()         ; Reload Script
-^!+#`::     Run("C:\Users\" . A_UserName . "\Scripts\toggle_touch.cmd")
-
-
-; --- 5. HELPER FUNCTIONS ---
+; --- 7. HELPER FUNCTIONS ---
 
 runFocusOrStart(path, exe) {
     if ProcessExist(exe)
@@ -116,30 +122,15 @@ SnapWindow(direction) {
     activeHwnd := WinActive("A")
     if !activeHwnd
         return
-
-    ; 1. Get the handle of the monitor the window is currently on
-    ; MONITOR_DEFAULTTONEAREST = 2
     hMonitor := DllCall("User32.dll\MonitorFromWindow", "Ptr", activeHwnd, "UInt", 2, "Ptr")
-    
-    ; 2. Get monitor info via a buffer (shorthand for V2)
     NumPut("UInt", 40, buf := Buffer(40))
     if !DllCall("User32.dll\GetMonitorInfoW", "Ptr", hMonitor, "Ptr", buf)
         return
-
-    ; Extract Work Area coordinates from the buffer
-    left   := NumGet(buf, 20, "Int")
-    top    := NumGet(buf, 24, "Int")
-    right  := NumGet(buf, 28, "Int")
-    bottom := NumGet(buf, 32, "Int")
-    
-    width  := right - left
-    height := bottom - top
-
-    ; 3. Handle Maximized state (Restore before moving)
+    left := NumGet(buf, 20, "Int"), top := NumGet(buf, 24, "Int")
+    right := NumGet(buf, 28, "Int"), bottom := NumGet(buf, 32, "Int")
+    width := right - left, height := bottom - top
     if WinGetMinMax("ahk_id " activeHwnd) != 0
         WinRestore("ahk_id " activeHwnd)
-
-    ; 4. Perform the Snap based on the specific monitor's bounds
     switch direction {
         case "Left":  WinMove(left, top, width // 2, height, "ahk_id " activeHwnd)
         case "Right": WinMove(left + width // 2, top, width // 2, height, "ahk_id " activeHwnd)
@@ -148,46 +139,29 @@ SnapWindow(direction) {
     }
 }
 
-; --- 5. HELPER FUNCTIONS (Add this) ---
 MoveWindowToNextMonitor() {
     activeHwnd := WinActive("A")
     if !activeHwnd
         return
-
-    ; 1. Store the state
     wasMaximized := WinGetMinMax("ahk_id " activeHwnd)
-
-    ; 2. Get the Monitor Handle for the current window
-    ; 2 = MONITOR_DEFAULTTONEAREST
     hMonitor := DllCall("User32.dll\MonitorFromWindow", "Ptr", activeHwnd, "UInt", 2, "Ptr")
-    
-    ; 3. Loop through monitors to find which index matches that handle
     monitorCount := MonitorGetCount()
     currentMonitor := 1
     loop monitorCount {
-        ; Create a buffer for monitor info
         NumPut("UInt", 40, buf := Buffer(40))
         if DllCall("User32.dll\GetMonitorInfoW", "Ptr", hMonitor, "Ptr", buf) {
-            ; Check if this monitor's coordinates match the current index
             MonitorGet(A_Index, &L, &T, &R, &B)
-            ; Get monitor info from buffer to compare (simplified for this logic)
             if (L == NumGet(buf, 4, "Int") && T == NumGet(buf, 8, "Int")) {
                 currentMonitor := A_Index
                 break
             }
         }
     }
-
-    ; 4. Calculate Next Monitor (The Swap)
     nextMonitor := (currentMonitor == monitorCount) ? 1 : currentMonitor + 1
     MonitorGetWorkArea(nextMonitor, &nLeft, &nTop)
-
-    ; 5. The Logic: Restore -> Move -> Re-maximize
     if (wasMaximized == 1)
         WinRestore("ahk_id " activeHwnd)
-
     WinMove(nLeft, nTop, , , "ahk_id " activeHwnd)
-
     if (wasMaximized == 1)
         WinMaximize("ahk_id " activeHwnd)
 }

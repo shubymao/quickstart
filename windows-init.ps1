@@ -80,7 +80,7 @@ function Install-WingetPackage {
     }
 }
 
-# --- Personalization & Taskbar ---
+# --- Personalization & Registry ---
 function Apply-AllSettings {
     param([string]$RepoRoot)
     Write-Step "Applying Theme & Keyboard Settings..."
@@ -100,52 +100,19 @@ function Apply-AllSettings {
     }
 }
 
-function Configure-TaskbarLinks {
-    param([string]$Profile)
-    Write-Step "Configuring Taskbar Pins..."
-    
-    $Apps = @(
-        "C:\Windows\explorer.exe",
-        "C:\Program Files\Google\Chrome\Application\chrome.exe",
-        "C:\Program Files\Mozilla Firefox\firefox.exe",
-        "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
-        "C:\Windows\System32\SnippingTool.exe",
-        "C:\Windows\System32\calc.exe"
-    )
-
-    if ($Profile -eq "Dev") {
-        $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Microsoft VS Code\Code.exe"
-        $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Joplin\Joplin.exe"
-        $Apps += "C:\Program Files\WezTerm\wezterm.exe"
-        $Apps += "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-    }
-
-    $PinScript = @"
-    function Set-Pin {
-        param(`$Path)
-        if (-not (Test-Path `$Path)) { return }
-        `$shell = New-Object -ComObject Shell.Application
-        `$folder = `$shell.NameSpace((Split-Path `$Path))
-        `$item = `$folder.ParseName((Split-Path `$Path -Leaf))
-        `$verb = `$item.Verbs() | Where-Object { `$_.Id -eq 'taskbarpin' -or `$_.Name -replace '&','' -match '(Pin to taskbar)' }
-        if (`$verb) { `$verb.DoIt() }
-    }
-    @($( ($Apps | ForEach-Object { "'$_'" }) -join "," )) | ForEach-Object { Set-Pin -Path `$_ }
-"@
-    Run-AsUser -ScriptContent $PinScript -TaskName "PinTaskbarIcons"
-}
-
 # --- Configs & Dotfiles ---
 function Register-DevConfigs {
     param([string]$RepoRoot)
     Write-Step "Syncing Dotfiles..."
     $TargetAppData = Join-Path $OriginalUserPath "AppData\Roaming"
 
-    # WezTerm
+    # 1. WezTerm (.wezterm.lua)
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
+    if (Test-Path $wezSource) { 
+        Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force 
+    }
 
-    # Flow Launcher
+    # 2. Flow Launcher (Settings.json)
     $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
     $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
     if (Test-Path $flowSource) {
@@ -159,10 +126,12 @@ function Register-DevConfigs {
         Set-Acl $flowDestDir $Acl
     }
 
-    # AutoHotkey
+    # 3. AutoHotkey (Direct Copy to Startup)
     $ahkSource = Join-Path $RepoRoot "dotfiles\main.ahk"
     if (Test-Path $ahkSource) {
         $startupDir = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
+        if (-not (Test-Path $startupDir)) { New-Item -Path $startupDir -ItemType Directory -Force | Out-Null }
+        Write-Step "Copying main.ahk to Startup folder..."
         Copy-Item -Path $ahkSource -Destination (Join-Path $startupDir "main.ahk") -Force
     }
 }
@@ -179,7 +148,7 @@ function Invoke-WindowsInit {
     if (-not (Test-Path $RepoCloneDir)) { git clone --depth 1 $RepoUrl $RepoCloneDir }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
-    # 2. App Lists
+    # 2. Complete App Inventories
     $SystemApps = @(
         "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", 
         "VideoLAN.VLC", "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale", 
@@ -198,7 +167,7 @@ function Invoke-WindowsInit {
     )
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full)" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full Setup)" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
         $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
     }
@@ -209,14 +178,12 @@ function Invoke-WindowsInit {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
             foreach ($app in $UserApps) { Install-WingetPackage -Id $app -SystemWide $false }
-            Configure-TaskbarLinks -Profile "Dev"
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
         }
         "BaseOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
-            Configure-TaskbarLinks -Profile "BaseOnly"
         }
         "SettingsOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
