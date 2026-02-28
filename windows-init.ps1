@@ -324,7 +324,7 @@ function Invoke-WindowsInit {
         "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", 
         "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale",
         "Nextcloud.NextcloudDesktop", "Jellyfin.JellyfinMediaPlayer", "TheDocumentFoundation.LibreOffice", 
-        "SyncTrayzor.SyncTrayzor"
+        "SyncTrayzor.SyncTrayzor", "LAB02Research.HASSAgent"
     )
 
     $DevApps = @(
