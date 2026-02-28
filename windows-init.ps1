@@ -1,6 +1,8 @@
 param(
     [string]$WslDistro = "Ubuntu",
     [string]$RepoCloneDir = (Join-Path $HOME "quickstart"),
+    [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly")]
+    [string]$InstallProfile,
     [switch]$NoExitPrompt
 )
 
@@ -112,14 +114,24 @@ function Clone-Repo {
 }
 
 function Get-InstallProfile {
+    param([string]$ExistingProfile)
+
+    if ($ExistingProfile) {
+        return $ExistingProfile
+    }
+
     Write-Host ""
     Write-Host "Choose install profile:"
-    Write-Host "1) Base only (recommended for non-dev machines)"
-    Write-Host "2) Dev (installs Base + Dev tools)"
-    $choice = Read-Host "Enter choice [1/2]"
+    Write-Host "1) Settings only (no app installs)"
+    Write-Host "2) Base only (recommended for non-dev machines)"
+    Write-Host "3) Dev only (installs Base + Dev tools)"
+    $choice = Read-Host "Enter choice [1/2/3]"
 
-    if ($choice -eq "2") {
-        return "Dev"
+    if ($choice -eq "1") {
+        return "SettingsOnly"
+    }
+    if ($choice -eq "3") {
+        return "DevOnly"
     }
 
     return "BaseOnly"
@@ -547,14 +559,14 @@ function Wait-ForExitPrompt {
 
 function Invoke-WindowsInit {
     Ensure-Admin
-    Require-Command -Name "winget"
     Ensure-GitInstalled
     Clone-Repo -RepoUrl $RepoUrl -Branch $RepoBranch -Destination $RepoCloneDir
 
     Write-Step "Preparing assets from cloned repo"
     $repoRoot = Get-RepoAssetsRoot -RepoRoot $RepoCloneDir
-    $InstallProfile = Get-InstallProfile
-    $isDevProfile = $InstallProfile -eq "Dev"
+    $InstallProfile = Get-InstallProfile -ExistingProfile $InstallProfile
+    $isSettingsOnly = $InstallProfile -eq "SettingsOnly"
+    $isDevProfile = $InstallProfile -eq "DevOnly"
     $InstallMode = Get-InstallMode
 
     $appGroups = @{
@@ -588,27 +600,32 @@ function Invoke-WindowsInit {
         foreach ($id in $appGroups.Dev) { [void]$installIds.Add($id) }
     }
 
-    Write-Step "Installing app packages for profile: $InstallProfile"
-    if ($InstallMode -eq "Parallel") {
-        if ($PSVersionTable.PSVersion.Major -lt 7) {
-            Write-Step "Parallel install requires PowerShell 7+. Falling back to serial mode."
+    if (-not $isSettingsOnly) {
+        Require-Command -Name "winget"
+        Write-Step "Installing app packages for profile: $InstallProfile"
+        if ($InstallMode -eq "Parallel") {
+            if ($PSVersionTable.PSVersion.Major -lt 7) {
+                Write-Step "Parallel install requires PowerShell 7+. Falling back to serial mode."
+                foreach ($id in $installIds) {
+                    Install-WingetPackage -Id $id
+                }
+            } else {
+                Write-Step "Running winget installs in parallel (throttle=3)"
+                $installFunc = ${function:Install-WingetPackage}
+                @($installIds) | ForEach-Object -Parallel {
+                    & $using:installFunc -Id $_
+                } -ThrottleLimit 3
+            }
+        } else {
             foreach ($id in $installIds) {
                 Install-WingetPackage -Id $id
             }
-        } else {
-            Write-Step "Running winget installs in parallel (throttle=3)"
-            $installFunc = ${function:Install-WingetPackage}
-            @($installIds) | ForEach-Object -Parallel {
-                & $using:installFunc -Id $_
-            } -ThrottleLimit 3
         }
-    } else {
-        foreach ($id in $installIds) {
-            Install-WingetPackage -Id $id
-        }
-    }
 
-    Install-NerdFonts -RepoRoot $repoRoot
+        Install-NerdFonts -RepoRoot $repoRoot
+    } else {
+        Write-Step "Skipping app installs (settings-only)"
+    }
 
     if ($isDevProfile) {
         Require-Command -Name "wsl"
