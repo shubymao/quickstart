@@ -58,7 +58,10 @@ function Install-WingetPackage {
         return
     }
     Write-Step "Installing: $Id..."
-    $args = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine"
+    # Flow Launcher and Joplin often prefer User scope to avoid permission errors
+    $scope = if ($Id -match "Flow-Launcher" -or $Id -match "Joplin") { "user" } else { "machine" }
+    
+    $args = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope $scope"
     $process = Start-Process winget -ArgumentList $args -Wait -PassThru -NoNewWindow
     if ($process.ExitCode -ne 0) {
         $fallbackArgs = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements"
@@ -66,7 +69,7 @@ function Install-WingetPackage {
     }
 }
 
-# --- User Context Bridge (Crucial for User Registry & Taskbar) ---
+# --- User Context Bridge ---
 function Run-AsUser {
     param([string]$ScriptContent, [string]$TaskName = "QuickstartUserTask")
     $TriggerScript = Join-Path $env:TEMP "$TaskName.ps1"
@@ -83,12 +86,11 @@ function Run-AsUser {
     if (Test-Path $TriggerScript) { Remove-Item $TriggerScript -Force }
 }
 
-# --- Personalization (Themes & Keyboard) ---
+# --- Personalization ---
 function Apply-AllSettings {
     param([string]$RepoRoot)
-    Write-Step "Applying Theme & Keyboard Settings to User Context..."
+    Write-Step "Applying Theme & Keyboard Settings..."
 
-    # Use the User Bridge to set Registry values in HKCU for the real user
     $UserRegScript = @"
     # Dark Mode
     `$pers = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
@@ -103,7 +105,6 @@ function Apply-AllSettings {
 "@
     Run-AsUser -ScriptContent $UserRegScript -TaskName "ApplyUserRegistry"
 
-    # Wallpapers (File System)
     $sourceDir = Join-Path $RepoRoot "wallpapers"
     if (Test-Path $sourceDir) {
         $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
@@ -112,7 +113,7 @@ function Apply-AllSettings {
     }
 }
 
-# --- Taskbar Bridge ---
+# --- Taskbar ---
 function Configure-TaskbarLinks {
     param([string]$Profile)
     Write-Step "Configuring Taskbar Pins..."
@@ -129,7 +130,6 @@ function Configure-TaskbarLinks {
     if ($Profile -eq "Dev") {
         $Apps += "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
         $Apps += "C:\Program Files\WezTerm\wezterm.exe"
-        $Apps += "C:\Program Files\Alacritty\alacritty.exe"
         $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Microsoft VS Code\Code.exe"
         $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Joplin\Joplin.exe"
     }
@@ -151,23 +151,48 @@ function Configure-TaskbarLinks {
     Run-AsUser -ScriptContent $PinScript -TaskName "PinTaskbarIcons"
 }
 
-# --- Dev Helpers & Configs ---
-function Install-VDALibrary {
+# --- Dev Configs ---
+function Register-DevConfigs {
     param([string]$RepoRoot)
-    $destFolder = Join-Path $OriginalUserPath "Documents\AutoHotkey\Lib"
-    if (-not (Test-Path $destFolder)) { New-Item -Path $destFolder -ItemType Directory -Force | Out-Null }
-    $sourceDll = Join-Path $RepoRoot "lib\VirtualDesktopAccessor.dll"
-    if (Test-Path $sourceDll) { Copy-Item -Path $sourceDll -Destination (Join-Path $destFolder "VirtualDesktopAccessor.dll") -Force }
+    Write-Step "Syncing Dotfiles (Fixing Flow Launcher Permissions)..."
+    $TargetAppData = Join-Path $OriginalUserPath "AppData\Roaming"
+
+    # WezTerm
+    $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
+    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
+
+    # Flow Launcher - WE CREATE THE FOLDER AS ADMIN BUT ENSURE IT'S ACCESSIBLE
+    $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
+    $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
+    if (Test-Path $flowSource) {
+        if (-not (Test-Path $flowDestDir)) { 
+            New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null 
+        }
+        Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
+        
+        # FIX PERMISSIONS: Ensure the User has full control over the folder we just created as Admin
+        $Acl = Get-Acl $flowDestDir
+        $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule((Get-CimInstance Win32_ComputerSystem).UserName, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+        $Acl.SetAccessRule($Ar)
+        Set-Acl $flowDestDir $Acl
+    }
+
+    # AHK Startup
+    $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
+    if (Test-Path $ahkScript) {
+        $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+        if (Test-Path $ahkExe) {
+            $startup = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
+            $wsh = New-Object -ComObject WScript.Shell
+            $lnk = $wsh.CreateShortcut((Join-Path $startup "main.ahk.lnk"))
+            $lnk.TargetPath = $ahkExe
+            $lnk.Arguments = "`"$ahkScript`""
+            $lnk.Save()
+        }
+    }
 }
 
-function Install-TouchScripts {
-    param([string]$RepoRoot)
-    $destFolder = Join-Path $OriginalUserPath "Scripts"
-    if (-not (Test-Path $destFolder)) { New-Item -Path $destFolder -ItemType Directory -Force | Out-Null }
-    $sourceDir = Join-Path $RepoRoot "scripts"
-    if (Test-Path $sourceDir) { Get-ChildItem -Path $sourceDir -Include "*.cmd", "*.ps1" | ForEach-Object { Copy-Item $_.FullName -Destination $destFolder -Force } }
-}
-
+# --- Font Install ---
 function Install-JetBrainsMonoNerdFont {
     Write-Step "Installing Fonts..."
     try {
@@ -188,50 +213,7 @@ function Install-JetBrainsMonoNerdFont {
     } catch { Write-Failure "Font install failed." }
 }
 
-function Register-DevConfigs {
-    param([string]$RepoRoot)
-    Write-Step "Syncing Dotfiles..."
-    $TargetAppData = Join-Path $OriginalUserPath "AppData\Roaming"
-
-    Install-VDALibrary -RepoRoot $RepoRoot
-    Install-TouchScripts -RepoRoot $RepoRoot
-
-    # WezTerm
-    $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
-
-    # Alacritty
-    $alacrittySource = Join-Path $RepoRoot "dotfiles\alacritty\alacritty.toml"
-    $alacrittyDestDir = Join-Path $TargetAppData "alacritty"
-    if (Test-Path $alacrittySource) {
-        if (-not (Test-Path $alacrittyDestDir)) { New-Item -Path $alacrittyDestDir -ItemType Directory -Force | Out-Null }
-        Copy-Item -Path $alacrittySource -Destination (Join-Path $alacrittyDestDir "alacritty.toml") -Force
-    }
-
-    # Flow Launcher
-    $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
-    $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
-    if (Test-Path $flowSource) {
-        if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
-        Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
-    }
-
-    # AHK Startup
-    $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
-    if (Test-Path $ahkScript) {
-        $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
-        if (Test-Path $ahkExe) {
-            $startup = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
-            $wsh = New-Object -ComObject WScript.Shell
-            $lnk = $wsh.CreateShortcut((Join-Path $startup "main.ahk.lnk"))
-            $lnk.TargetPath = $ahkExe
-            $lnk.Arguments = "`"$ahkScript`""
-            $lnk.Save()
-        }
-    }
-}
-
-# --- Execution Controller ---
+# --- Controller ---
 function Invoke-WindowsInit {
     Ensure-Admin
     winget source update
@@ -245,7 +227,7 @@ function Invoke-WindowsInit {
     $DevApps = @("wez.wezterm", "Alacritty.Alacritty", "Microsoft.VisualStudioCode", "Joplin.Joplin", "Proton.ProtonVPN", "Oracle.VirtualBox", "AutoHotkey.AutoHotkey", "Flow-Launcher.Flow-Launcher")
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile (User Context: $OriginalUserPath):`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile (User: $OriginalUserPath):`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
         $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
     }
@@ -267,10 +249,8 @@ function Invoke-WindowsInit {
         }
     }
 
-    Write-Step "Bootstrap finished. Refreshing Explorer UI..."
+    Write-Step "Finished. Restarting Explorer..."
     Stop-Process -Name explorer -Force
 }
 
-try { Invoke-WindowsInit } 
-catch { Write-Failure "Error: $($_.Exception.Message)" } 
-finally { if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" } }
+try { Invoke-WindowsInit } catch { Write-Failure "Error: $($_.Exception.Message)" } finally { if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" } }
