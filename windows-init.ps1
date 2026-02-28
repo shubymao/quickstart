@@ -1,9 +1,11 @@
 param(
     [string]$WslDistro = "Ubuntu",
     [string]$RepoCloneDir = (Join-Path ([Environment]::GetFolderPath("Desktop")) "quickstart"),
-    [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly")]
+    [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly", "Dev")]
     [string]$InstallProfile,
-    [switch]$NoExitPrompt
+    [switch]$NoExitPrompt,
+    # This captures your user path BEFORE the script elevates to Admin
+    [string]$OriginalUserPath = $HOME
 )
 
 Set-StrictMode -Version Latest
@@ -26,11 +28,16 @@ function Test-IsAdmin {
 function Ensure-Admin {
     if (Test-IsAdmin) { return }
     Write-Step "Requesting administrator privileges..."
+    
+    # We must pass the current $HOME to the new Admin process
+    $currentHome = $HOME 
+
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
     if ($PSBoundParameters.ContainsKey("WslDistro")) { $arguments += @("-WslDistro", $WslDistro) }
     if ($PSBoundParameters.ContainsKey("RepoCloneDir")) { $arguments += @("-RepoCloneDir", $RepoCloneDir) }
     if ($PSBoundParameters.ContainsKey("InstallProfile")) { $arguments += @("-InstallProfile", $InstallProfile) }
     if ($NoExitPrompt) { $arguments += "-NoExitPrompt" }
+    $arguments += @("-OriginalUserPath", $currentHome)
 
     try {
         Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Verb RunAs | Out-Null
@@ -79,7 +86,7 @@ function Apply-AllSettings {
     param([string]$RepoRoot)
     Write-Step "Applying System Personalization & Touch Keyboard..."
 
-    # 1. Dark Theme
+    # 1. Dark Theme (Note: This targets Admin HKCU, but usually mirrors to active session)
     $personalizeKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
     if (-not (Test-Path $personalizeKey)) { New-Item -Path $personalizeKey -Force | Out-Null }
     Set-ItemProperty -Path $personalizeKey -Name "AppsUseLightTheme" -Value 0
@@ -90,15 +97,14 @@ function Apply-AllSettings {
     if (-not (Test-Path $tabTipKey)) { New-Item -Path $tabTipKey -Force | Out-Null }
     Set-ItemProperty -Path $tabTipKey -Name "UserKeyboardScalingFactor" -Value 180
     
-    # Enable Touch Keyboard icon in Taskbar (1 = Always show)
     $taskbarKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\TouchKeyboard"
     if (-not (Test-Path $taskbarKey)) { New-Item -Path $taskbarKey -Force | Out-Null }
     Set-ItemProperty -Path $taskbarKey -Name "TouchKeyboardContextMenuOption" -Value 2
 
-    # 3. Wallpapers
+    # 3. Wallpapers (Targeting Original User's Pictures)
     $sourceDir = Join-Path $RepoRoot "wallpapers"
     if (Test-Path $sourceDir) {
-        $picturesDir = [Environment]::GetFolderPath("MyPictures")
+        $picturesDir = Join-Path $OriginalUserPath "Pictures"
         $targetDir = Join-Path $picturesDir "quickstart-wallpapers"
         if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
         
@@ -108,6 +114,7 @@ function Apply-AllSettings {
             $dest
         }
 
+        # Registry updates for Wallpaper
         $wpReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
         Set-ItemProperty -Path $wpReg -Name "BackgroundType" -Value 2 
         Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Interval" -Value 600000
@@ -141,7 +148,7 @@ function Install-JetBrainsMonoNerdFont {
         New-Item -Path $tempRoot -ItemType Directory -Force | Out-Null
         
         $zipPath = Join-Path $tempRoot "$fontName.zip"
-        Start-BitsTransfer -Source $asset.browser_download_url -Destination $zipPath -Priority Foreground
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
         Expand-Archive -Path $zipPath -DestinationPath $tempRoot -Force
         
         $fontRegPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
@@ -162,23 +169,15 @@ function Install-VDALibrary {
     param([string]$RepoRoot)
     Write-Step "Installing VirtualDesktopAccessor.dll..."
 
-    # Define paths
+    # Path redirected to Original User's Documents
+    $destFolder = Join-Path $OriginalUserPath "Documents\AutoHotkey\Lib"
     $sourceDll = Join-Path $RepoRoot "lib\VirtualDesktopAccessor.dll"
-    $destFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "AutoHotkey\Lib"
     $destFile = Join-Path $destFolder "VirtualDesktopAccessor.dll"
 
     if (Test-Path $sourceDll) {
-        # Create folder if it doesn't exist
-        if (-not (Test-Path $destFolder)) {
-            New-Item -Path $destFolder -ItemType Directory -Force | Out-Null
-            Write-Step "Created directory: $destFolder"
-        }
-
-        # Copy the file
+        if (-not (Test-Path $destFolder)) { New-Item -Path $destFolder -ItemType Directory -Force | Out-Null }
         Copy-Item -Path $sourceDll -Destination $destFile -Force
         Write-Host "    Successfully copied DLL to $destFile" -ForegroundColor Green
-    } else {
-        Write-Failure "Source DLL not found at $sourceDll"
     }
 }
 
@@ -186,29 +185,14 @@ function Install-TouchScripts {
     param([string]$RepoRoot)
     Write-Step "Installing Touch Toggle scripts..."
 
-    # Define paths
-    $userProfile = [Environment]::GetFolderPath("UserProfile")
-    $destFolder = Join-Path $userProfile "Scripts"
+    $destFolder = Join-Path $OriginalUserPath "Scripts"
     $sourceDir = Join-Path $RepoRoot "scripts"
 
-    # Create destination folder if it doesn't exist
-    if (-not (Test-Path $destFolder)) {
-        New-Item -Path $destFolder -ItemType Directory -Force | Out-Null
-        Write-Step "Created directory: $destFolder"
-    }
+    if (-not (Test-Path $destFolder)) { New-Item -Path $destFolder -ItemType Directory -Force | Out-Null }
 
-    $filesToCopy = @("toggle_touch.cmd", "toggle_touch.ps1")
-
-    foreach ($file in $filesToCopy) {
+    foreach ($file in @("toggle_touch.cmd", "toggle_touch.ps1")) {
         $src = Join-Path $sourceDir $file
-        $dest = Join-Path $destFolder $file
-
-        if (Test-Path $src) {
-            Copy-Item -Path $src -Destination $dest -Force
-            Write-Host "    Copied $file to $dest" -ForegroundColor Green
-        } else {
-            Write-Warning "Source file not found: $src"
-        }
+        if (Test-Path $src) { Copy-Item -Path $src -Destination (Join-Path $destFolder $file) -Force }
     }
 }
 
@@ -217,90 +201,74 @@ function Set-TaskbarPin {
         [Parameter(Mandatory=$true)][string]$FilePath,
         [Parameter(Mandatory=$true)][ValidateSet("Pin", "Unpin")][string]$Action
     )
-    
-    if (-not (Test-Path $FilePath)) {
-        Write-Warning "Cannot pin $FilePath - Path not found."
-        return
-    }
+    if (-not (Test-Path $FilePath)) { return }
 
     $shell = New-Object -ComObject Shell.Application
     $folder = $shell.NameSpace((Split-Path $FilePath))
     $item = $folder.ParseName((Split-Path $FilePath -Leaf))
     $verbs = $item.Verbs()
 
-    # Find the localized string for Pin/Unpin
     $verbName = if ($Action -eq "Pin") { "taskbarpin" } else { "taskbarunpin" }
     $verb = $verbs | Where-Object { $_.Id -eq $verbName -or $_.Name -replace '&','' -match "(Pin to taskbar|Unpin from taskbar)" }
 
-    if ($verb) {
-        $verb.DoIt()
-    }
+    if ($verb) { $verb.DoIt() }
 }
 
 function Configure-TaskbarLinks {
     param([string]$Profile)
     Write-Step "Configuring Taskbar Pins..."
-
-    # Common Paths
+    
     $Explorer = "C:\Windows\explorer.exe"
     $Chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
     $Firefox = "C:\Program Files\Mozilla Firefox\firefox.exe"
     $Brave = "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-    $SnippingTool = "C:\Windows\System32\SnippingTool.exe"
-    $Calculator = "C:\Windows\System32\calc.exe"
     
-    # Dev Paths
-    $PowerShell = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-    $WezTerm = "$env:ProgramFiles\WezTerm\wezterm.exe"
-    $Alacritty = "$env:ProgramFiles\Alacritty\alacritty.exe"
-    $VSCode = "$env:LocalAppdata\Programs\Microsoft VS Code\Code.exe"
-    $Joplin = "$env:LocalAppdata\Programs\Joplin\Joplin.exe"
-
-    $BasePins = @($Explorer, $Chrome, $Firefox, $Brave, $SnippingTool, $Calculator)
-    $DevPins = @($PowerShell, $WezTerm, $Alacritty, $VSCode, $Joplin)
-
-    # Pin Base apps
+    $BasePins = @($Explorer, $Chrome, $Firefox, $Brave)
     foreach ($app in $BasePins) { Set-TaskbarPin -FilePath $app -Action "Pin" }
 
-    # Pin Dev apps if applicable
     if ($Profile -eq "Dev") {
-        foreach ($app in $DevPins) { Set-TaskbarPin -FilePath $app -Action "Pin" }
+        $VSCode = "$OriginalUserPath\AppData\Local\Programs\Microsoft VS Code\Code.exe"
+        Set-TaskbarPin -FilePath $VSCode -Action "Pin"
     }
 }
 
 function Register-DevConfigs {
     param([string]$RepoRoot)
-    Write-Step "Configuring Dev Environment..."
+    Write-Step "Configuring Dev Environment for $OriginalUserPath..."
+
+    # Redirect AppData paths
+    $TargetAppData = Join-Path $OriginalUserPath "AppData\Roaming"
 
     # 1. WezTerm
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $HOME ".wezterm.lua") -Force }
+    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
 
     # 2. Alacritty
     $alacrittySource = Join-Path $RepoRoot "dotfiles\alacritty\alacritty.toml"
+    $alacrittyDestDir = Join-Path $TargetAppData "alacritty"
     if (Test-Path $alacrittySource) {
-        $alacrittyDestDir = Join-Path $env:APPDATA "alacritty"
         if (-not (Test-Path $alacrittyDestDir)) { New-Item -Path $alacrittyDestDir -ItemType Directory -Force | Out-Null }
         Copy-Item -Path $alacrittySource -Destination (Join-Path $alacrittyDestDir "alacritty.toml") -Force
     }
 
-    # 3. Flow Launcher Settings Sync
+    # 3. Flow Launcher
     $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
+    $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
     if (Test-Path $flowSource) {
-        $flowDestDir = Join-Path $env:APPDATA "FlowLauncher\Settings"
         if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
         Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
     }
 
-    # 4. AutoHotkey Startup Registration
+    # 4. AutoHotkey Startup (Targeting User Startup)
     Install-VDALibrary -RepoRoot $repoRoot
     Install-TouchScripts -RepoRoot $repoRoot
     $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
     if (Test-Path $ahkScript) {
         $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
         if (Test-Path $ahkExe) {
+            $startupFolder = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
             $wshShell = New-Object -ComObject WScript.Shell
-            $shortcut = $wshShell.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Startup")) "main.ahk.lnk"))
+            $shortcut = $wshShell.CreateShortcut((Join-Path $startupFolder "main.ahk.lnk"))
             $shortcut.TargetPath = $ahkExe
             $shortcut.Arguments = "`"$ahkScript`""
             $shortcut.Save()
@@ -334,7 +302,7 @@ function Invoke-WindowsInit {
     )
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile (User: $OriginalUserPath):`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
         $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
     }
@@ -356,8 +324,8 @@ function Invoke-WindowsInit {
         }
     }
 
-    Write-Step "Bootstrap finished. Refreshing shell..."
-    Get-Process explorer | Stop-Process -Force # Restarts Explorer to apply Taskbar/UI changes
+    Write-Step "Bootstrap finished. Refreshing explorer..."
+    Get-Process explorer | Stop-Process -Force
 }
 
 try {
