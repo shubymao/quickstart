@@ -1,6 +1,7 @@
 param(
     [string]$WslDistro = "Ubuntu",
-    [string]$RepoCloneDir = (Join-Path $HOME "quickstart")
+    [string]$RepoCloneDir = (Join-Path $HOME "quickstart"),
+    [switch]$NoExitPrompt
 )
 
 Set-StrictMode -Version Latest
@@ -12,6 +13,11 @@ $RepoBranch = "main"
 function Write-Step {
     param([string]$Message)
     Write-Host "[quickstart] $Message" -ForegroundColor Cyan
+}
+
+function Write-Failure {
+    param([string]$Message)
+    Write-Host "[quickstart] $Message" -ForegroundColor Red
 }
 
 function Test-IsAdmin {
@@ -34,6 +40,12 @@ function Ensure-Admin {
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
     if ($PSBoundParameters.ContainsKey("WslDistro")) {
         $arguments += @("-WslDistro", $WslDistro)
+    }
+    if ($PSBoundParameters.ContainsKey("RepoCloneDir")) {
+        $arguments += @("-RepoCloneDir", $RepoCloneDir)
+    }
+    if ($NoExitPrompt) {
+        $arguments += "-NoExitPrompt"
     }
 
     try {
@@ -65,8 +77,18 @@ function Install-WingetPackage {
     winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements
 }
 
+function Refresh-ProcessPath {
+    $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $segments = @()
+    if ($machinePath) { $segments += $machinePath }
+    if ($userPath) { $segments += $userPath }
+    $env:Path = ($segments -join ";")
+}
+
 function Ensure-GitInstalled {
     Install-WingetPackage -Id "Git.Git"
+    Refresh-ProcessPath
     Require-Command -Name "git"
 }
 
@@ -530,89 +552,118 @@ function Configure-AppShortcuts {
     }
 }
 
-Ensure-Admin
-Require-Command -Name "winget"
-Ensure-GitInstalled
-Clone-Repo -RepoUrl $RepoUrl -Branch $RepoBranch -Destination $RepoCloneDir
+function Wait-ForExitPrompt {
+    if ($NoExitPrompt) {
+        return
+    }
 
-Write-Step "Preparing standalone assets"
-$repoRoot = Get-RepoAssetsRoot -RepoUrl $RepoUrl -Branch $RepoBranch
-$InstallProfile = Get-InstallProfile
-$isDevProfile = $InstallProfile -eq "Dev"
-$InstallMode = Get-InstallMode
-
-$appGroups = @{
-    Base = @(
-        "Mozilla.Firefox",
-        "Google.Chrome",
-        "Brave.Brave",
-        "7zip.7zip",
-        "VideoLAN.VLC",
-        "GIMP.GIMP",
-        "PDFgear.PDFgear",
-        "tailscale.tailscale",
-        "Nextcloud.NextcloudDesktop",
-        "Jellyfin.JellyfinMediaPlayer",
-        "TheDocumentFoundation.LibreOffice"
-    )
-    Dev = @(
-        "Wez.WezTerm",
-        "Alacritty.Alacritty",
-        "Microsoft.VisualStudioCode",
-        "Joplin.Joplin",
-        "Proton.ProtonVPN",
-        "Oracle.VirtualBox",
-        "AutoHotkey.AutoHotkey"
-    )
+    if ($Host.Name -eq "ConsoleHost") {
+        Write-Host ""
+        [void](Read-Host "Press Enter to close this window")
+    }
 }
 
-$installIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-foreach ($id in $appGroups.Base) { [void]$installIds.Add($id) }
-if ($isDevProfile) {
-    foreach ($id in $appGroups.Dev) { [void]$installIds.Add($id) }
-}
+function Invoke-WindowsInit {
+    Ensure-Admin
+    Require-Command -Name "winget"
+    Ensure-GitInstalled
+    Clone-Repo -RepoUrl $RepoUrl -Branch $RepoBranch -Destination $RepoCloneDir
 
-Write-Step "Installing app packages for profile: $InstallProfile"
-if ($InstallMode -eq "Parallel") {
-    if ($PSVersionTable.PSVersion.Major -lt 7) {
-        Write-Step "Parallel install requires PowerShell 7+. Falling back to serial mode."
+    Write-Step "Preparing standalone assets"
+    $repoRoot = Get-RepoAssetsRoot -RepoUrl $RepoUrl -Branch $RepoBranch
+    $InstallProfile = Get-InstallProfile
+    $isDevProfile = $InstallProfile -eq "Dev"
+    $InstallMode = Get-InstallMode
+
+    $appGroups = @{
+        Base = @(
+            "Mozilla.Firefox",
+            "Google.Chrome",
+            "Brave.Brave",
+            "7zip.7zip",
+            "VideoLAN.VLC",
+            "GIMP.GIMP",
+            "PDFgear.PDFgear",
+            "tailscale.tailscale",
+            "Nextcloud.NextcloudDesktop",
+            "Jellyfin.JellyfinMediaPlayer",
+            "TheDocumentFoundation.LibreOffice"
+        )
+        Dev = @(
+            "Wez.WezTerm",
+            "Alacritty.Alacritty",
+            "Microsoft.VisualStudioCode",
+            "Joplin.Joplin",
+            "Proton.ProtonVPN",
+            "Oracle.VirtualBox",
+            "AutoHotkey.AutoHotkey"
+        )
+    }
+
+    $installIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($id in $appGroups.Base) { [void]$installIds.Add($id) }
+    if ($isDevProfile) {
+        foreach ($id in $appGroups.Dev) { [void]$installIds.Add($id) }
+    }
+
+    Write-Step "Installing app packages for profile: $InstallProfile"
+    if ($InstallMode -eq "Parallel") {
+        if ($PSVersionTable.PSVersion.Major -lt 7) {
+            Write-Step "Parallel install requires PowerShell 7+. Falling back to serial mode."
+            foreach ($id in $installIds) {
+                Install-WingetPackage -Id $id
+            }
+        } else {
+            Write-Step "Running winget installs in parallel (throttle=3)"
+            $installFunc = ${function:Install-WingetPackage}
+            @($installIds) | ForEach-Object -Parallel {
+                & $using:installFunc -Id $_
+            } -ThrottleLimit 3
+        }
+    } else {
         foreach ($id in $installIds) {
             Install-WingetPackage -Id $id
         }
-    } else {
-        Write-Step "Running winget installs in parallel (throttle=3)"
-        $installFunc = ${function:Install-WingetPackage}
-        @($installIds) | ForEach-Object -Parallel {
-            & $using:installFunc -Id $_
-        } -ThrottleLimit 3
     }
-} else {
-    foreach ($id in $installIds) {
-        Install-WingetPackage -Id $id
+
+    Install-NerdFonts -RepoRoot $repoRoot
+
+    if ($isDevProfile) {
+        Require-Command -Name "wsl"
+        Ensure-WslInstalled -Distro $WslDistro
+        Install-WezTermConfig -RepoRoot $repoRoot
+        Register-StartupAhk -RepoRoot $repoRoot
+    }
+
+    $wallpaperResult = Install-Wallpapers -RepoRoot $repoRoot
+    Set-DesktopSlideshow -WallpaperDirectory $wallpaperResult.Directory
+    try {
+        Set-LockScreenImage -ImagePath $wallpaperResult.FirstImage
+    } catch {
+        Write-Step "Lock screen policy was not set: $($_.Exception.Message)"
+    }
+    Set-WindowsDarkTheme
+    Enable-TouchKeyboardLargest
+    Configure-AppShortcuts
+
+    Write-Step "Windows bootstrap completed."
+    if ($isDevProfile) {
+        Write-Step "If WSL features were newly enabled, reboot Windows and run this script once more."
     }
 }
 
-Install-NerdFonts -RepoRoot $repoRoot
-
-if ($isDevProfile) {
-    Require-Command -Name "wsl"
-    Ensure-WslInstalled -Distro $WslDistro
-    Install-WezTermConfig -RepoRoot $repoRoot
-    Register-StartupAhk -RepoRoot $repoRoot
-}
-
-$wallpaperResult = Install-Wallpapers -RepoRoot $repoRoot
-Set-DesktopSlideshow -WallpaperDirectory $wallpaperResult.Directory
 try {
-    Set-LockScreenImage -ImagePath $wallpaperResult.FirstImage
+    Invoke-WindowsInit
 } catch {
-    Write-Step "Lock screen policy was not set: $($_.Exception.Message)"
-}
-Set-WindowsDarkTheme
-Enable-TouchKeyboardLargest
-Configure-AppShortcuts
-
-Write-Step "Windows bootstrap completed."
-if ($isDevProfile) {
-    Write-Step "If WSL features were newly enabled, reboot Windows and run this script once more."
+    Write-Failure "Bootstrap failed."
+    Write-Failure "Message: $($_.Exception.Message)"
+    if ($_.InvocationInfo -and $_.InvocationInfo.PositionMessage) {
+        Write-Failure $_.InvocationInfo.PositionMessage
+    }
+    if ($_.ScriptStackTrace) {
+        Write-Failure "Stack: $($_.ScriptStackTrace)"
+    }
+    exit 1
+} finally {
+    Wait-ForExitPrompt
 }
