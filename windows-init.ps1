@@ -56,7 +56,7 @@ function Install-WingetPackage {
     }
     Write-Step "Installing: $Id"
     # Added scope and source flags to prevent common hangs
-    winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine
+    winget install --id $Id --silent --accept-package-agreements --accept-source-agreements --include-unknown --scope machine
 }
 
 # --- Settings & Personalization ---
@@ -184,7 +184,7 @@ function Invoke-WindowsInit {
         "Brave.Brave", 
         "7zip.7zip", 
         "VideoLAN.VLC", 
-        "GIMP.GIMP",
+        "GIMP.GIMP.3",
         "PDFgear.PDFgear", 
         "Tailscale.Tailscale",
         "Nextcloud.NextcloudDesktop",
@@ -203,9 +203,9 @@ function Invoke-WindowsInit {
     )
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) DevOnly" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
-        $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"DevOnly"}; Default{"SettingsOnly"} }
+        $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
     }
 
     switch ($InstallProfile) {
@@ -216,7 +216,7 @@ function Invoke-WindowsInit {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $BaseApps) { Install-WingetPackage -Id $app }
         }
-        "DevOnly" {
+        "Dev" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in ($BaseApps + $DevApps)) { Install-WingetPackage -Id $app }
             Install-JetBrainsMonoNerdFont
