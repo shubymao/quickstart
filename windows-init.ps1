@@ -66,10 +66,56 @@ function Install-WingetPackage {
     }
 }
 
-# --- Taskbar Bridge (Fixed Escaping) ---
+# --- User Context Bridge (Crucial for User Registry & Taskbar) ---
+function Run-AsUser {
+    param([string]$ScriptContent, [string]$TaskName = "QuickstartUserTask")
+    $TriggerScript = Join-Path $env:TEMP "$TaskName.ps1"
+    $ScriptContent | Out-File -FilePath $TriggerScript -Encoding utf8
+
+    $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
+    $Action = New-ScheduledTaskAction -Execute 'Powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$TriggerScript`""
+    $Principal = New-ScheduledTaskPrincipal -UserId $UserAccount -LogonType Interactive
+    
+    Register-ScheduledTask -TaskName $TaskName -Action $Action -Principal $Principal -Force | Out-Null
+    Start-ScheduledTask -TaskName $TaskName
+    Start-Sleep -Seconds 5
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+    if (Test-Path $TriggerScript) { Remove-Item $TriggerScript -Force }
+}
+
+# --- Personalization (Themes & Keyboard) ---
+function Apply-AllSettings {
+    param([string]$RepoRoot)
+    Write-Step "Applying Theme & Keyboard Settings to User Context..."
+
+    # Use the User Bridge to set Registry values in HKCU for the real user
+    $UserRegScript = @"
+    # Dark Mode
+    `$pers = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+    if (-not (Test-Path `$pers)) { New-Item -Path `$pers -Force }
+    Set-ItemProperty -Path `$pers -Name "AppsUseLightTheme" -Value 0 -Force
+    Set-ItemProperty -Path `$pers -Name "SystemUsesLightTheme" -Value 0 -Force
+
+    # Touch Keyboard Scaling
+    `$ttip = "HKCU:\Software\Microsoft\TabletTip\1.7"
+    if (-not (Test-Path `$ttip)) { New-Item -Path `$ttip -Force }
+    Set-ItemProperty -Path `$ttip -Name "UserKeyboardScalingFactor" -Value 180 -Force
+"@
+    Run-AsUser -ScriptContent $UserRegScript -TaskName "ApplyUserRegistry"
+
+    # Wallpapers (File System)
+    $sourceDir = Join-Path $RepoRoot "wallpapers"
+    if (Test-Path $sourceDir) {
+        $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
+        if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
+        Get-ChildItem -Path $sourceDir -File | ForEach-Object { Copy-Item -Path $_.FullName -Destination (Join-Path $targetDir $_.Name) -Force }
+    }
+}
+
+# --- Taskbar Bridge ---
 function Configure-TaskbarLinks {
     param([string]$Profile)
-    Write-Step "Configuring Taskbar Pins for the logged-in user..."
+    Write-Step "Configuring Taskbar Pins..."
 
     $Apps = @(
         "C:\Windows\explorer.exe",
@@ -88,10 +134,7 @@ function Configure-TaskbarLinks {
         $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Joplin\Joplin.exe"
     }
 
-    $TriggerScript = Join-Path $env:TEMP "pin_taskbar.ps1"
-    
-    # Note: Using backticks to escape $ inside the script block so they evaluate as user variables
-    $ScriptBlock = @"
+    $PinScript = @"
     function Set-Pin {
         param(`$Path)
         if (-not (Test-Path `$Path)) { return }
@@ -105,60 +148,10 @@ function Configure-TaskbarLinks {
     `$AppsToPin = @($( ($Apps | ForEach-Object { "'$_'" }) -join "," ))
     foreach (`$App in `$AppsToPin) { Set-Pin -Path `$App }
 "@
-    $ScriptBlock | Out-File -FilePath $TriggerScript -Encoding utf8
-
-    $TaskName = "QuickstartTaskbarPin"
-    $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
-    $Action = New-ScheduledTaskAction -Execute 'Powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$TriggerScript`""
-    $Principal = New-ScheduledTaskPrincipal -UserId $UserAccount -LogonType Interactive
-    
-    Register-ScheduledTask -TaskName $TaskName -Action $Action -Principal $Principal -Force | Out-Null
-    Start-ScheduledTask -TaskName $TaskName
-    Start-Sleep -Seconds 5 # Wait for shell response
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+    Run-AsUser -ScriptContent $PinScript -TaskName "PinTaskbarIcons"
 }
 
-# --- Personalization (SID Targeting) ---
-function Apply-AllSettings {
-    param([string]$RepoRoot)
-    Write-Step "Applying Theme & Settings to $OriginalUserPath..."
-
-    $UserSID = (New-Object System.Security.Principal.NTAccount((Get-CimInstance Win32_ComputerSystem).UserName)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-    $BaseRegPath = "Registry::HKEY_USERS\$UserSID"
-
-    # Dark Theme
-    $personalizeKey = "$BaseRegPath\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-    if (Test-Path $personalizeKey) {
-        Set-ItemProperty -Path $personalizeKey -Name "AppsUseLightTheme" -Value 0 -Force
-        Set-ItemProperty -Path $personalizeKey -Name "SystemUsesLightTheme" -Value 0 -Force
-    }
-
-    # Touch Keyboard Scaling
-    $tabTipKey = "$BaseRegPath\Software\Microsoft\TabletTip\1.7"
-    if (-not (Test-Path $tabTipKey)) { New-Item -Path $tabTipKey -Force | Out-Null }
-    Set-ItemProperty -Path $tabTipKey -Name "UserKeyboardScalingFactor" -Value 180 -Force
-
-    # Wallpapers
-    $sourceDir = Join-Path $RepoRoot "wallpapers"
-    if (Test-Path $sourceDir) {
-        $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
-        if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
-        Get-ChildItem -Path $sourceDir -File | ForEach-Object { Copy-Item -Path $_.FullName -Destination (Join-Path $targetDir $_.Name) -Force }
-        
-        $code = @'
-        using System.Runtime.InteropServices;
-        public class Wallpaper {
-            [DllImport("user32.dll", CharSet = CharSet.Auto)]
-            public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-        }
-'@
-        if (-not ([System.Management.Automation.PSTypeName]'Wallpaper').Type) { Add-Type -TypeDefinition $code }
-        $wpFile = Get-ChildItem -Path $targetDir -File | Select-Object -First 1
-        if ($wpFile) { [Wallpaper]::SystemParametersInfo(20, 0, $wpFile.FullName, 3) }
-    }
-}
-
-# --- Dev Helpers ---
+# --- Dev Helpers & Configs ---
 function Install-VDALibrary {
     param([string]$RepoRoot)
     $destFolder = Join-Path $OriginalUserPath "Documents\AutoHotkey\Lib"
@@ -172,7 +165,7 @@ function Install-TouchScripts {
     $destFolder = Join-Path $OriginalUserPath "Scripts"
     if (-not (Test-Path $destFolder)) { New-Item -Path $destFolder -ItemType Directory -Force | Out-Null }
     $sourceDir = Join-Path $RepoRoot "scripts"
-    Get-ChildItem -Path $sourceDir -Include "*.cmd", "*.ps1" | ForEach-Object { Copy-Item $_.FullName -Destination $destFolder -Force }
+    if (Test-Path $sourceDir) { Get-ChildItem -Path $sourceDir -Include "*.cmd", "*.ps1" | ForEach-Object { Copy-Item $_.FullName -Destination $destFolder -Force } }
 }
 
 function Install-JetBrainsMonoNerdFont {
@@ -203,15 +196,24 @@ function Register-DevConfigs {
     Install-VDALibrary -RepoRoot $RepoRoot
     Install-TouchScripts -RepoRoot $RepoRoot
 
-    # WezTerm & Alacritty
+    # WezTerm
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
     if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
 
+    # Alacritty
     $alacrittySource = Join-Path $RepoRoot "dotfiles\alacritty\alacritty.toml"
     $alacrittyDestDir = Join-Path $TargetAppData "alacritty"
     if (Test-Path $alacrittySource) {
         if (-not (Test-Path $alacrittyDestDir)) { New-Item -Path $alacrittyDestDir -ItemType Directory -Force | Out-Null }
         Copy-Item -Path $alacrittySource -Destination (Join-Path $alacrittyDestDir "alacritty.toml") -Force
+    }
+
+    # Flow Launcher
+    $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
+    $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
+    if (Test-Path $flowSource) {
+        if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
+        Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
     }
 
     # AHK Startup
@@ -229,7 +231,7 @@ function Register-DevConfigs {
     }
 }
 
-# --- Execution ---
+# --- Execution Controller ---
 function Invoke-WindowsInit {
     Ensure-Admin
     winget source update
@@ -243,7 +245,7 @@ function Invoke-WindowsInit {
     $DevApps = @("wez.wezterm", "Alacritty.Alacritty", "Microsoft.VisualStudioCode", "Joplin.Joplin", "Proton.ProtonVPN", "Oracle.VirtualBox", "AutoHotkey.AutoHotkey", "Flow-Launcher.Flow-Launcher")
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile (User Context: $OriginalUserPath):`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
         $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
     }
@@ -265,8 +267,10 @@ function Invoke-WindowsInit {
         }
     }
 
-    Write-Step "Finished. Restarting Explorer..."
+    Write-Step "Bootstrap finished. Refreshing Explorer UI..."
     Stop-Process -Name explorer -Force
 }
 
-try { Invoke-WindowsInit } catch { Write-Failure "Error: $($_.Exception.Message)" } finally { if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" } }
+try { Invoke-WindowsInit } 
+catch { Write-Failure "Error: $($_.Exception.Message)" } 
+finally { if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" } }
