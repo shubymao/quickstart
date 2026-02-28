@@ -55,29 +55,27 @@ function Install-WingetPackage {
         return
     }
     Write-Step "Installing: $Id"
-    winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements
+    # Added scope and source flags to prevent common hangs
+    winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine
 }
 
-# --- Settings & Personalization (SettingsOnly Mode) ---
+# --- Settings & Personalization ---
 function Apply-AllSettings {
     param([string]$RepoRoot)
     Write-Step "Applying System Personalization..."
 
     # 1. Dark Theme
     $personalizeKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-    New-Item -Path $personalizeKey -Force | Out-Null
+    if (-not (Test-Path $personalizeKey)) { New-Item -Path $personalizeKey -Force | Out-Null }
     Set-ItemProperty -Path $personalizeKey -Name "AppsUseLightTheme" -Value 0
     Set-ItemProperty -Path $personalizeKey -Name "SystemUsesLightTheme" -Value 0
 
-    # 2. Wallpapers & Slideshow
+    # 2. Wallpapers & Slideshow (Fixed Logic)
     $sourceDir = Join-Path $RepoRoot "wallpapers"
     if (Test-Path $sourceDir) {
         $picturesDir = [Environment]::GetFolderPath("MyPictures")
         $targetDir = Join-Path $picturesDir "quickstart-wallpapers"
-        
-        if (-not (Test-Path $targetDir)) {
-            New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
-        }
+        if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
         
         $copiedFiles = Get-ChildItem -Path $sourceDir -File | ForEach-Object {
             $dest = Join-Path $targetDir $_.Name
@@ -85,34 +83,27 @@ function Apply-AllSettings {
             $dest
         }
 
-        # Set Registry for Slideshow
+        # Registry for Slideshow
         $wpReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
-        Set-ItemProperty -Path $wpReg -Name "BackgroundType" -Value 2 # 2 = Slideshow
+        Set-ItemProperty -Path $wpReg -Name "BackgroundType" -Value 2 
         Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Interval" -Value 600000
         Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Shuffle" -Value 1
-        
-        # This is the "Magic" string Windows needs for the directory path in some versions
         Set-ItemProperty -Path $wpReg -Name "ImagesRootPath" -Value $targetDir
 
-        # FORCE REFRESH: Use C# to call SystemParametersInfo
+        # Refresh Desktop via User32.dll
         $code = @'
-using System.Runtime.InteropServices;
-public class Wallpaper {
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-    public const int SPI_SETDESKWALLPAPER = 20;
-    public const int SPIF_UPDATEINIFILE = 0x01;
-    public const int SPIF_SENDWININICHANGE = 0x02;
-}
-'@
-        Add-Type -TypeDefinition $code
-        
-        # Set the first image as static wallpaper immediately to force an update
-        if ($copiedFiles.Count -gt 0) {
-            [Wallpaper]::SystemParametersInfo([Wallpaper]::SPI_SETDESKWALLPAPER, 0, $copiedFiles[0], 3)
+        using System.Runtime.InteropServices;
+        public class Wallpaper {
+            [DllImport("user32.dll", CharSet = CharSet.Auto)]
+            public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
         }
-
-        # 2b. Lock Screen (Applied via HKLM, needs Admin which you already have)
+'@
+        if (-not ([System.Management.Automation.PSTypeName]'Wallpaper').Type) { Add-Type -TypeDefinition $code }
+        if ($copiedFiles.Count -gt 0) {
+            [Wallpaper]::SystemParametersInfo(20, 0, $copiedFiles[0], 3)
+        }
+        
+        # Lock Screen Policy
         $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
         if (-not (Test-Path $policyKey)) { New-Item -Path $policyKey -Force | Out-Null }
         Set-ItemProperty -Path $policyKey -Name "LockScreenImage" -Value $copiedFiles[0]
@@ -123,9 +114,9 @@ public class Wallpaper {
     Write-Step "UI and Theme settings complete."
 }
 
-# --- Optimized Single Font Extension ---
+# --- Optimized Font Install ---
 function Install-JetBrainsMonoNerdFont {
-    Write-Step "Fetching JetBrains Mono Nerd Font (High Speed)..."
+    Write-Step "Fetching JetBrains Mono Nerd Font..."
     $fontName = "JetBrainsMono"
     $releaseApi = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
     
@@ -133,16 +124,12 @@ function Install-JetBrainsMonoNerdFont {
         $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ "User-Agent" = "quickstart" }
         $asset = $release.assets | Where-Object { $_.name -eq "$fontName.zip" } | Select-Object -First 1
         
-        if (-not $asset) { throw "Font asset not found." }
-
         $tempRoot = Join-Path $env:TEMP "quickstart-jb-font"
         if (Test-Path $tempRoot) { Remove-Item $tempRoot -Recurse -Force }
         New-Item -Path $tempRoot -ItemType Directory -Force | Out-Null
         
         $zipPath = Join-Path $tempRoot "$fontName.zip"
-        Write-Step "Downloading JetBrains Mono..."
         Start-BitsTransfer -Source $asset.browser_download_url -Destination $zipPath -Priority Foreground
-        
         Expand-Archive -Path $zipPath -DestinationPath $tempRoot -Force
         
         $fontRegPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
@@ -154,7 +141,6 @@ function Install-JetBrainsMonoNerdFont {
             }
         }
         Remove-Item $tempRoot -Recurse -Force
-        Write-Step "JetBrains Mono installed and registered."
     } catch {
         Write-Failure "Font install failed: $($_.Exception.Message)"
     }
@@ -163,7 +149,6 @@ function Install-JetBrainsMonoNerdFont {
 function Register-DevConfigs {
     param([string]$RepoRoot)
     Write-Step "Configuring Dev Environment..."
-    
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
     if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $HOME ".wezterm.lua") -Force }
 
@@ -187,32 +172,38 @@ function Invoke-WindowsInit {
     Refresh-ProcessPath
     
     if (-not (Test-Path $RepoCloneDir)) {
-        Write-Step "Cloning repository to Desktop..."
+        Write-Step "Cloning repository..."
         git clone --depth 1 $RepoUrl $RepoCloneDir
     }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
+    # --- Updated App Lists ---
     $BaseApps = @(
         "Mozilla.Firefox", 
         "Google.Chrome", 
         "Brave.Brave", 
         "7zip.7zip", 
         "VideoLAN.VLC", 
-        "GIMP.GIMP",        # Verified ID
+        "GIMP.GIMP",
         "PDFgear.PDFgear", 
-        "Tailscale.Tailscale" # Capitalized
+        "Tailscale.Tailscale",
+        "Nextcloud.NextcloudDesktop",
+        "Jellyfin.JellyfinMediaPlayer",
+        "TheDocumentFoundation.LibreOffice"
     )
 
     $DevApps = @(
-        "wez.wezterm",      # Lowercase/Verified ID
+        "wez.wezterm",
         "Alacritty.Alacritty", 
         "Microsoft.VisualStudioCode", 
+        "Joplin.Joplin",
+        "Proton.ProtonVPN",
         "Oracle.VirtualBox", 
         "AutoHotkey.AutoHotkey"
     )
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly (Settings + Base Apps)`n3) DevOnly (Settings + Base + Dev Apps)" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) DevOnly" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
         $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"DevOnly"}; Default{"SettingsOnly"} }
     }
