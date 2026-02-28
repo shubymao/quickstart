@@ -49,7 +49,6 @@ function Refresh-ProcessPath {
 # --- Installation Core ---
 function Install-WingetPackage {
     param([string]$Id)
-    # 1. Skip if already installed
     $existing = winget list --exact --id $Id --accept-source-agreements 2>$null
     if ($LASTEXITCODE -eq 0 -and $existing -match [regex]::Escape($Id)) {
         Write-Step "Already installed: $Id"
@@ -57,21 +56,16 @@ function Install-WingetPackage {
     }
 
     Write-Step "Installing: $Id..."
-
-    # 2. First Attempt: Try with Machine Scope (Standard for Admin scripts)
     $args = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine"
     $process = Start-Process winget -ArgumentList $args -Wait -PassThru -NoNewWindow
     
-    # 3. Fallback: If it failed (likely due to No Applicable Installer/Scope issues)
     if ($process.ExitCode -ne 0) {
-        Write-Warning "Machine scope failed for $Id (Code: $($process.ExitCode)). Retrying without scope restriction..."
-        
-        # Try again without specifying scope, letting Winget/Installer decide
+        Write-Warning "Machine scope failed for $Id. Retrying without scope restriction..."
         $fallbackArgs = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements"
         $fallbackProcess = Start-Process winget -ArgumentList $fallbackArgs -Wait -PassThru -NoNewWindow
         
         if ($fallbackProcess.ExitCode -ne 0) {
-            Write-Failure "Failed to install $Id after fallback. Check architecture or manual logs."
+            Write-Failure "Failed to install $Id after fallback."
         } else {
             Write-Host "    Successfully installed $Id via fallback." -ForegroundColor Green
         }
@@ -83,7 +77,7 @@ function Install-WingetPackage {
 # --- Settings & Personalization ---
 function Apply-AllSettings {
     param([string]$RepoRoot)
-    Write-Step "Applying System Personalization..."
+    Write-Step "Applying System Personalization & Touch Keyboard..."
 
     # 1. Dark Theme
     $personalizeKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
@@ -91,7 +85,17 @@ function Apply-AllSettings {
     Set-ItemProperty -Path $personalizeKey -Name "AppsUseLightTheme" -Value 0
     Set-ItemProperty -Path $personalizeKey -Name "SystemUsesLightTheme" -Value 0
 
-    # 2. Wallpapers & Slideshow (Fixed Logic)
+    # 2. Touch Keyboard Scaling (180) and Visibility
+    $tabTipKey = "HKCU:\Software\Microsoft\TabletTip\1.7"
+    if (-not (Test-Path $tabTipKey)) { New-Item -Path $tabTipKey -Force | Out-Null }
+    Set-ItemProperty -Path $tabTipKey -Name "UserKeyboardScalingFactor" -Value 180
+    
+    # Enable Touch Keyboard icon in Taskbar (1 = Always show)
+    $taskbarKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\TouchKeyboard"
+    if (-not (Test-Path $taskbarKey)) { New-Item -Path $taskbarKey -Force | Out-Null }
+    Set-ItemProperty -Path $taskbarKey -Name "TouchKeyboardContextMenuOption" -Value 2
+
+    # 3. Wallpapers
     $sourceDir = Join-Path $RepoRoot "wallpapers"
     if (Test-Path $sourceDir) {
         $picturesDir = [Environment]::GetFolderPath("MyPictures")
@@ -104,14 +108,12 @@ function Apply-AllSettings {
             $dest
         }
 
-        # Registry for Slideshow
         $wpReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
         Set-ItemProperty -Path $wpReg -Name "BackgroundType" -Value 2 
         Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Interval" -Value 600000
         Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Shuffle" -Value 1
         Set-ItemProperty -Path $wpReg -Name "ImagesRootPath" -Value $targetDir
 
-        # Refresh Desktop via User32.dll
         $code = @'
         using System.Runtime.InteropServices;
         public class Wallpaper {
@@ -120,19 +122,8 @@ function Apply-AllSettings {
         }
 '@
         if (-not ([System.Management.Automation.PSTypeName]'Wallpaper').Type) { Add-Type -TypeDefinition $code }
-        if ($copiedFiles.Count -gt 0) {
-            [Wallpaper]::SystemParametersInfo(20, 0, $copiedFiles[0], 3)
-        }
-        
-        # Lock Screen Policy
-        $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
-        if (-not (Test-Path $policyKey)) { New-Item -Path $policyKey -Force | Out-Null }
-        Set-ItemProperty -Path $policyKey -Name "LockScreenImage" -Value $copiedFiles[0]
+        if ($copiedFiles.Count -gt 0) { [Wallpaper]::SystemParametersInfo(20, 0, $copiedFiles[0], 3) }
     }
-
-    # 3. Touch Keyboard Scaling
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Name "UserKeyboardScalingFactor" -Value 200
-    Write-Step "UI and Theme settings complete."
 }
 
 # --- Optimized Font Install ---
@@ -170,9 +161,28 @@ function Install-JetBrainsMonoNerdFont {
 function Register-DevConfigs {
     param([string]$RepoRoot)
     Write-Step "Configuring Dev Environment..."
+
+    # 1. WezTerm
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
     if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $HOME ".wezterm.lua") -Force }
 
+    # 2. Alacritty
+    $alacrittySource = Join-Path $RepoRoot "dotfiles\alacritty\alacritty.toml"
+    if (Test-Path $alacrittySource) {
+        $alacrittyDestDir = Join-Path $env:APPDATA "alacritty"
+        if (-not (Test-Path $alacrittyDestDir)) { New-Item -Path $alacrittyDestDir -ItemType Directory -Force | Out-Null }
+        Copy-Item -Path $alacrittySource -Destination (Join-Path $alacrittyDestDir "alacritty.toml") -Force
+    }
+
+    # 3. Flow Launcher Settings Sync
+    $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
+    if (Test-Path $flowSource) {
+        $flowDestDir = Join-Path $env:APPDATA "FlowLauncher\Settings"
+        if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
+        Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
+    }
+
+    # 4. AutoHotkey Startup Registration
     $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
     if (Test-Path $ahkScript) {
         $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
@@ -198,29 +208,16 @@ function Invoke-WindowsInit {
     }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
-    # --- Updated App Lists ---
     $BaseApps = @(
-        "Mozilla.Firefox", 
-        "Google.Chrome", 
-        "Brave.Brave", 
-        "7zip.7zip", 
-        "VideoLAN.VLC", 
-        "GIMP.GIMP.3",
-        "PDFgear.PDFgear", 
-        "Tailscale.Tailscale",
-        "Nextcloud.NextcloudDesktop",
-        "Jellyfin.JellyfinMediaPlayer",
-        "TheDocumentFoundation.LibreOffice"
+        "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", 
+        "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale",
+        "Nextcloud.NextcloudDesktop", "Jellyfin.JellyfinMediaPlayer", "TheDocumentFoundation.LibreOffice"
     )
 
     $DevApps = @(
-        "wez.wezterm",
-        "Alacritty.Alacritty", 
-        "Microsoft.VisualStudioCode", 
-        "Joplin.Joplin",
-        "Proton.ProtonVPN",
-        "Oracle.VirtualBox", 
-        "AutoHotkey.AutoHotkey"
+        "wez.wezterm", "Alacritty.Alacritty", "Microsoft.VisualStudioCode", 
+        "Joplin.Joplin", "Proton.ProtonVPN", "Oracle.VirtualBox", 
+        "AutoHotkey.AutoHotkey", "Flow-Launcher.Flow-Launcher"
     )
 
     if (-not $InstallProfile) {
@@ -230,9 +227,7 @@ function Invoke-WindowsInit {
     }
 
     switch ($InstallProfile) {
-        "SettingsOnly" {
-            Apply-AllSettings -RepoRoot $repoRoot
-        }
+        "SettingsOnly" { Apply-AllSettings -RepoRoot $repoRoot }
         "BaseOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $BaseApps) { Install-WingetPackage -Id $app }
@@ -246,7 +241,8 @@ function Invoke-WindowsInit {
         }
     }
 
-    Write-Step "Bootstrap finished successfully."
+    Write-Step "Bootstrap finished. Refreshing shell..."
+    Get-Process explorer | Stop-Process -Force # Restarts Explorer to apply Taskbar/UI changes
 }
 
 try {
