@@ -323,7 +323,8 @@ function Invoke-WindowsInit {
     $BaseApps = @(
         "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", 
         "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale",
-        "Nextcloud.NextcloudDesktop", "Jellyfin.JellyfinMediaPlayer", "TheDocumentFoundation.LibreOffice"
+        "Nextcloud.NextcloudDesktop", "Jellyfin.JellyfinMediaPlayer", "TheDocumentFoundation.LibreOffice", 
+        "SyncTrayzor.SyncTrayzor"
     )
 
     $DevApps = @(
