@@ -6,7 +6,8 @@ local config = wezterm.config_builder()
 
 -- This is where you actually apply your config choices
 
-config.font = wezterm.font("MesloLGS Nerd Font Mono")
+-- Updated to JetBrains Mono
+config.font = wezterm.font("JetBrainsMono Nerd Font")
 config.font_size = 18
 
 -- disable this to prevent tabs
@@ -18,30 +19,17 @@ config.window_background_opacity = 0.8
 config.macos_window_background_blur = 10
 config.window_close_confirmation = "NeverPrompt"
 config.window_padding = {
-	left = 0,
-	right = 0,
-	top = 0,
-	bottom = 0,
+    left = 0,
+    right = 0,
+    top = 0,
+    bottom = 0,
 }
+
 local mux = wezterm.mux
 
 wezterm.on("gui-startup", function()
-	local tab, pane, window = mux.spawn_window({})
-	window:gui_window():maximize()
+    local tab, pane, window = mux.spawn_window({})
+    window:gui_window():maximize()
 end)
 
--- -- my coolnight colorscheme:
--- config.colors = {
--- 	foreground = "#CBE0F0",
--- 	background = "#011423",
--- 	cursor_bg = "#47FF9C",
--- 	cursor_border = "#47FF9C",
--- 	cursor_fg = "#011423",
--- 	selection_bg = "#033259",
--- 	selection_fg = "#CBE0F0",
--- 	ansi = { "#214969", "#E52E2E", "#44FFB1", "#FFE073", "#0FC5ED", "#a277ff", "#24EAF7", "#24EAF7" },
--- 	brights = { "#214969", "#E52E2E", "#44FFB1", "#FFE073", "#A277FF", "#a277ff", "#24EAF7", "#24EAF7" },
--- }
-
--- and finally, return the configuration to wezterm
 return config
