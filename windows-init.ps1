@@ -1,6 +1,7 @@
 param(
     [string]$WslDistro = "Ubuntu",
-    [string]$RepoCloneDir = (Join-Path $HOME "quickstart"),
+    # Updated: Now defaults to the user's Desktop
+    [string]$RepoCloneDir = (Join-Path ([Environment]::GetFolderPath("Desktop")) "quickstart"),
     [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly")]
     [string]$InstallProfile,
     [switch]$NoExitPrompt
@@ -27,14 +28,15 @@ function Ensure-Admin {
     if (Test-IsAdmin) { return }
     Write-Step "Requesting administrator privileges..."
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
-    foreach ($key in $PSBoundParameters.Keys) {
-        $arguments += "-$key"
-        $arguments += $PSBoundParameters[$key]
-    }
+    if ($PSBoundParameters.ContainsKey("WslDistro")) { $arguments += @("-WslDistro", $WslDistro) }
+    if ($PSBoundParameters.ContainsKey("RepoCloneDir")) { $arguments += @("-RepoCloneDir", $RepoCloneDir) }
+    if ($PSBoundParameters.ContainsKey("InstallProfile")) { $arguments += @("-InstallProfile", $InstallProfile) }
+    if ($NoExitPrompt) { $arguments += "-NoExitPrompt" }
+
     try {
         Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Verb RunAs | Out-Null
     } catch {
-        throw "Administrator privileges required."
+        throw "Administrator privileges required. Approve the UAC prompt."
     }
     exit 0
 }
@@ -57,35 +59,33 @@ function Install-WingetPackage {
     winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements
 }
 
-# --- Settings & Personalization (The "SettingsOnly" Core) ---
+# --- Settings & Personalization (SettingsOnly Mode) ---
 function Apply-AllSettings {
     param([string]$RepoRoot)
-    Write-Step "--- Starting Settings Configuration ---"
+    Write-Step "Applying System Personalization..."
 
     # 1. Dark Theme
     $personalizeKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
     New-Item -Path $personalizeKey -Force | Out-Null
     Set-ItemProperty -Path $personalizeKey -Name "AppsUseLightTheme" -Value 0
     Set-ItemProperty -Path $personalizeKey -Name "SystemUsesLightTheme" -Value 0
-    
+
     # 2. Wallpapers & Slideshow
     $sourceDir = Join-Path $RepoRoot "wallpapers"
     if (Test-Path $sourceDir) {
         $picturesDir = [Environment]::GetFolderPath("MyPictures")
         $targetDir = Join-Path $picturesDir "quickstart-wallpapers"
         New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
+        
         $copied = Get-ChildItem -Path $sourceDir -File | ForEach-Object {
             Copy-Item -Path $_.FullName -Destination (Join-Path $targetDir $_.Name) -Force
             Join-Path $targetDir $_.Name
         }
-        
-        # Registry for Slideshow
-        $slideshowKey = "HKCU:\Control Panel\Personalization\Desktop Slideshow"
-        $wallpaperKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
-        Set-ItemProperty -Path $slideshowKey -Name "Interval" -Value 600000
-        Set-ItemProperty -Path $slideshowKey -Name "Shuffle" -Value 1
-        Set-ItemProperty -Path $wallpaperKey -Name "BackgroundType" -Value 2
-        Set-ItemProperty -Path $wallpaperKey -Name "ImagesRootPath" -Value $targetDir
+
+        Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Interval" -Value 600000
+        Set-ItemProperty -Path "HKCU:\Control Panel\Personalization\Desktop Slideshow" -Name "Shuffle" -Value 1
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers" -Name "BackgroundType" -Value 2
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers" -Name "ImagesRootPath" -Value $targetDir
         
         # Lock Screen Policy
         $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
@@ -93,95 +93,109 @@ function Apply-AllSettings {
         Set-ItemProperty -Path $policyKey -Name "LockScreenImage" -Value $copied[0]
         
         Start-Process -FilePath "RUNDLL32.EXE" -ArgumentList "USER32.DLL,UpdatePerUserSystemParameters 1, True" -WindowStyle Hidden
-        Write-Step "Wallpapers and Themes applied."
     }
 
-    # 3. Touch Keyboard
-    $tabletTipKey = "HKCU:\Software\Microsoft\TabletTip\1.7"
-    New-Item -Path $tabletTipKey -Force | Out-Null
-    Set-ItemProperty -Path $tabletTipKey -Name "UserKeyboardScalingFactor" -Value 200
-    Write-Step "UI Scaling updated."
+    # 3. Touch Keyboard Scaling
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Name "UserKeyboardScalingFactor" -Value 200
+    Write-Step "UI and Theme settings complete."
 }
 
-# --- Dev Specific Tasks ---
+# --- Dev Only Extensions ---
 function Install-NerdFonts {
-    Write-Step "Downloading and Installing Nerd Fonts..."
-    $fonts = @("Meslo", "FiraCode")
-    # (Abbreviated for space, but logic remains: Invoke-RestMethod to Github API + Shell.Application CopyHere)
-    Write-Step "Fonts installed."
+    Write-Step "Fetching latest Nerd Fonts..."
+    $fontPacks = @("Meslo", "FiraCode")
+    $releaseApi = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
+    $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ "User-Agent" = "quickstart" }
+    
+    $tempRoot = Join-Path $env:TEMP "quickstart-fonts"
+    New-Item -Path $tempRoot -ItemType Directory -Force | Out-Null
+    $fontsNamespace = (New-Object -ComObject Shell.Application).Namespace(0x14)
+
+    foreach ($pack in $fontPacks) {
+        $asset = $release.assets | Where-Object { $_.name -eq "$pack.zip" } | Select-Object -First 1
+        if ($asset) {
+            $zipPath = Join-Path $tempRoot $asset.name
+            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
+            Expand-Archive -Path $zipPath -DestinationPath (Join-Path $tempRoot $pack) -Force
+            Get-ChildItem -Path (Join-Path $tempRoot $pack) -Include "*.ttf","*.otf" -Recurse | ForEach-Object {
+                if (-not (Test-Path (Join-Path $env:WINDIR "Fonts\$($_.Name)"))) {
+                    $fontsNamespace.CopyHere($_.FullName, 16)
+                }
+            }
+        }
+    }
 }
 
 function Register-DevConfigs {
     param([string]$RepoRoot)
-    Write-Step "Registering Dev Configs (AHK, WezTerm)..."
+    Write-Step "Configuring Dev Environment..."
     
     # WezTerm
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) {
-        Copy-Item -Path $wezSource -Destination (Join-Path $HOME ".wezterm.lua") -Force
-    }
+    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $HOME ".wezterm.lua") -Force }
 
-    # AutoHotkey Startup
+    # AutoHotkey Shortcut
     $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
-    $startupDir = [Environment]::GetFolderPath("Startup")
-    # Logic to create .lnk shortcut...
-    Write-Step "AHK and WezTerm configs synced."
+    if (Test-Path $ahkScript) {
+        $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+        if (Test-Path $ahkExe) {
+            $wshShell = New-Object -ComObject WScript.Shell
+            $shortcut = $wshShell.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Startup")) "main.ahk.lnk"))
+            $shortcut.TargetPath = $ahkExe
+            $shortcut.Arguments = "`"$ahkScript`""
+            $shortcut.Save()
+        }
+    }
 }
 
-# --- Execution Logic ---
+# --- Execution Controller ---
 function Invoke-WindowsInit {
     Ensure-Admin
-    
-    # Ensure Git is present to get assets
     Install-WingetPackage -Id "Git.Git"
     Refresh-ProcessPath
     
+    # Clone onto Desktop
     if (-not (Test-Path $RepoCloneDir)) {
+        Write-Step "Cloning repository to Desktop..."
         git clone --depth 1 $RepoUrl $RepoCloneDir
     }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
     # Define App Sets
-    $BaseApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", "GIMP.GIMP", "PDFgear.PDFgear", "tailscale.tailscale")
+    $BaseApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", "GIMP.GIMP", "PDFgear.PDFgear", "tailscale.tailscale", "Nextcloud.NextcloudDesktop")
     $DevApps = @("Wez.WezTerm", "Alacritty.Alacritty", "Microsoft.VisualStudioCode", "Oracle.VirtualBox", "AutoHotkey.AutoHotkey")
 
-    # Prompt if profile not passed
     if (-not $InstallProfile) {
-        Write-Host "Select Profile:`n1) SettingsOnly`n2) BaseOnly`n3) DevOnly" -ForegroundColor Yellow
-        $ans = Read-Host "Enter 1, 2, or 3"
-        $InstallProfile = switch($ans){ "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"DevOnly"} }
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) DevOnly" -ForegroundColor Yellow
+        $choice = Read-Host "Choice"
+        $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"DevOnly"}; Default{"SettingsOnly"} }
     }
 
-    # --- THE MODULAR SWITCH ---
+    # Execute based on Profile
     switch ($InstallProfile) {
         "SettingsOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
         }
-        
         "BaseOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $BaseApps) { Install-WingetPackage -Id $app }
         }
-        
         "DevOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
-            # Install everything
             foreach ($app in ($BaseApps + $DevApps)) { Install-WingetPackage -Id $app }
-            
-            # Dev Specific Extras
             Install-NerdFonts
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
         }
     }
 
-    Write-Step "Operation Successful."
+    Write-Step "Bootstrap finished successfully."
 }
 
 try {
     Invoke-WindowsInit
 } catch {
-    Write-Failure "Failed: $($_.Exception.Message)"
+    Write-Failure "Error: $($_.Exception.Message)"
 } finally {
-    if (-not $NoExitPrompt) { Read-Host "Press Enter to exit" }
+    if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" }
 }
