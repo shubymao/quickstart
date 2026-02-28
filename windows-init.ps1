@@ -1,6 +1,5 @@
 param(
     [string]$WslDistro = "Ubuntu",
-    # Updated: Now defaults to the user's Desktop
     [string]$RepoCloneDir = (Join-Path ([Environment]::GetFolderPath("Desktop")) "quickstart"),
     [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly")]
     [string]$InstallProfile,
@@ -87,7 +86,6 @@ function Apply-AllSettings {
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers" -Name "BackgroundType" -Value 2
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers" -Name "ImagesRootPath" -Value $targetDir
         
-        # Lock Screen Policy
         $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
         New-Item -Path $policyKey -Force | Out-Null
         Set-ItemProperty -Path $policyKey -Name "LockScreenImage" -Value $copied[0]
@@ -100,29 +98,40 @@ function Apply-AllSettings {
     Write-Step "UI and Theme settings complete."
 }
 
-# --- Dev Only Extensions ---
-function Install-NerdFonts {
-    Write-Step "Fetching latest Nerd Fonts..."
-    $fontPacks = @("Meslo", "FiraCode")
+# --- Optimized Single Font Extension ---
+function Install-JetBrainsMonoNerdFont {
+    Write-Step "Fetching JetBrains Mono Nerd Font (High Speed)..."
+    $fontName = "JetBrainsMono"
     $releaseApi = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
-    $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ "User-Agent" = "quickstart" }
     
-    $tempRoot = Join-Path $env:TEMP "quickstart-fonts"
-    New-Item -Path $tempRoot -ItemType Directory -Force | Out-Null
-    $fontsNamespace = (New-Object -ComObject Shell.Application).Namespace(0x14)
+    try {
+        $release = Invoke-RestMethod -Uri $releaseApi -Headers @{ "User-Agent" = "quickstart" }
+        $asset = $release.assets | Where-Object { $_.name -eq "$fontName.zip" } | Select-Object -First 1
+        
+        if (-not $asset) { throw "Font asset not found." }
 
-    foreach ($pack in $fontPacks) {
-        $asset = $release.assets | Where-Object { $_.name -eq "$pack.zip" } | Select-Object -First 1
-        if ($asset) {
-            $zipPath = Join-Path $tempRoot $asset.name
-            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
-            Expand-Archive -Path $zipPath -DestinationPath (Join-Path $tempRoot $pack) -Force
-            Get-ChildItem -Path (Join-Path $tempRoot $pack) -Include "*.ttf","*.otf" -Recurse | ForEach-Object {
-                if (-not (Test-Path (Join-Path $env:WINDIR "Fonts\$($_.Name)"))) {
-                    $fontsNamespace.CopyHere($_.FullName, 16)
-                }
+        $tempRoot = Join-Path $env:TEMP "quickstart-jb-font"
+        if (Test-Path $tempRoot) { Remove-Item $tempRoot -Recurse -Force }
+        New-Item -Path $tempRoot -ItemType Directory -Force | Out-Null
+        
+        $zipPath = Join-Path $tempRoot "$fontName.zip"
+        Write-Step "Downloading JetBrains Mono..."
+        Start-BitsTransfer -Source $asset.browser_download_url -Destination $zipPath -Priority Foreground
+        
+        Expand-Archive -Path $zipPath -DestinationPath $tempRoot -Force
+        
+        $fontRegPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+        Get-ChildItem -Path $tempRoot -Include "*.ttf", "*.otf" -Recurse | ForEach-Object {
+            $dest = Join-Path $env:WINDIR "Fonts\$($_.Name)"
+            if (-not (Test-Path $dest)) {
+                Copy-Item -Path $_.FullName -Destination $dest -Force
+                Set-ItemProperty -Path $fontRegPath -Name "$($_.BaseName) (TrueType)" -Value $_.Name
             }
         }
+        Remove-Item $tempRoot -Recurse -Force
+        Write-Step "JetBrains Mono installed and registered."
+    } catch {
+        Write-Failure "Font install failed: $($_.Exception.Message)"
     }
 }
 
@@ -130,11 +139,9 @@ function Register-DevConfigs {
     param([string]$RepoRoot)
     Write-Step "Configuring Dev Environment..."
     
-    # WezTerm
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
     if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $HOME ".wezterm.lua") -Force }
 
-    # AutoHotkey Shortcut
     $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
     if (Test-Path $ahkScript) {
         $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
@@ -154,24 +161,21 @@ function Invoke-WindowsInit {
     Install-WingetPackage -Id "Git.Git"
     Refresh-ProcessPath
     
-    # Clone onto Desktop
     if (-not (Test-Path $RepoCloneDir)) {
         Write-Step "Cloning repository to Desktop..."
         git clone --depth 1 $RepoUrl $RepoCloneDir
     }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
-    # Define App Sets
-    $BaseApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", "GIMP.GIMP", "PDFgear.PDFgear", "tailscale.tailscale", "Nextcloud.NextcloudDesktop")
+    $BaseApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", "GIMP.GIMP", "PDFgear.PDFgear", "tailscale.tailscale")
     $DevApps = @("Wez.WezTerm", "Alacritty.Alacritty", "Microsoft.VisualStudioCode", "Oracle.VirtualBox", "AutoHotkey.AutoHotkey")
 
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) DevOnly" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly (Settings + Base Apps)`n3) DevOnly (Settings + Base + Dev Apps)" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
         $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"DevOnly"}; Default{"SettingsOnly"} }
     }
 
-    # Execute based on Profile
     switch ($InstallProfile) {
         "SettingsOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
@@ -183,7 +187,7 @@ function Invoke-WindowsInit {
         "DevOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in ($BaseApps + $DevApps)) { Install-WingetPackage -Id $app }
-            Install-NerdFonts
+            Install-JetBrainsMonoNerdFont
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
         }
