@@ -1,10 +1,10 @@
 param(
     [string]$WslDistro = "Ubuntu",
-    # Clones directly to the User's Documents folder
-    [string]$RepoCloneDir = (Join-Path ([Environment]::GetFolderPath("MyDocuments")) "quickstart"),
+    [string]$RepoCloneDir = (Join-Path ([Environment]::GetFolderPath("Desktop")) "quickstart"),
     [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly", "Dev")]
     [string]$InstallProfile,
     [switch]$NoExitPrompt,
+    # New parameter to track the original user's profile path
     [string]$OriginalUserPath = $HOME
 )
 
@@ -12,178 +12,166 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoUrl = "https://github.com/shubymao/quickstart"
+$RepoBranch = "main"
 
 # --- UI & Logging ---
 function Write-Step { param([string]$Message) Write-Host "[quickstart] $Message" -ForegroundColor Cyan }
 function Write-Failure { param([string]$Message) Write-Host "[quickstart] $Message" -ForegroundColor Red }
 
-# --- Admin Elevation ---
-function Ensure-Admin {
+# --- Admin & Environment ---
+function Test-IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-    if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { return }
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
 
-    Write-Step "Requesting administrator privileges..."
+function Ensure-Admin {
+    if (Test-IsAdmin) { return }
+    Write-Step "Capturing user context and requesting elevation..."
+    
+    # Store current user path to pass to the admin session
+    $currentHome = $HOME
+    
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
+    if ($PSBoundParameters.ContainsKey("WslDistro")) { $arguments += @("-WslDistro", $WslDistro) }
+    if ($PSBoundParameters.ContainsKey("RepoCloneDir")) { $arguments += @("-RepoCloneDir", $RepoCloneDir) }
     if ($PSBoundParameters.ContainsKey("InstallProfile")) { $arguments += @("-InstallProfile", $InstallProfile) }
-    $arguments += @("-OriginalUserPath", $HOME)
-    $arguments += @("-RepoCloneDir", $RepoCloneDir)
+    if ($NoExitPrompt) { $arguments += "-NoExitPrompt" }
+    
+    # Pass the original user path as an argument
+    $arguments += @("-OriginalUserPath", $currentHome)
 
     try {
         Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Verb RunAs | Out-Null
     } catch {
-        throw "Administrator privileges required."
+        throw "Administrator privileges required. Approve the UAC prompt."
     }
     exit 0
 }
 
-# --- User Context Bridge (Crucial for User Installs/Registry) ---
-function Run-AsUser {
-    param([string]$ScriptContent, [string]$TaskName = "QuickstartUserTask")
-    $TriggerScript = Join-Path $env:TEMP "$TaskName.ps1"
-    $ScriptContent | Out-File -FilePath $TriggerScript -Encoding utf8
+function Refresh-ProcessPath {
+    $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $env:Path = "$machinePath;$userPath"
+}
 
-    $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
-    $Action = New-ScheduledTaskAction -Execute 'Powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$TriggerScript`""
-    $Principal = New-ScheduledTaskPrincipal -UserId $UserAccount -LogonType Interactive
-    
-    Register-ScheduledTask -TaskName $TaskName -Action $Action -Principal $Principal -Force | Out-Null
-    Start-ScheduledTask -TaskName $TaskName
-    
-    # Wait for completion (especially for Winget)
-    while ((Get-ScheduledTask -TaskName $TaskName).State -eq "Running") { Start-Sleep -Seconds 2 }
-    
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-    if (Test-Path $TriggerScript) { Remove-Item $TriggerScript -Force }
+# --- Settings & Personalization ---
+function Apply-AllSettings {
+    param([string]$RepoRoot)
+    Write-Step "Applying System Personalization..."
+
+    # When running as Admin, HKCU is the Admin's registry. 
+    # To fix this, we'll use the current user's actual path to map settings.
+    $personalizeKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+    Set-ItemProperty -Path $personalizeKey -Name "AppsUseLightTheme" -Value 0 -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $personalizeKey -Name "SystemUsesLightTheme" -Value 0 -ErrorAction SilentlyContinue
+
+    # Touch Keyboard Scaling
+    $tabTipKey = "HKCU:\Software\Microsoft\TabletTip\1.7"
+    if (-not (Test-Path $tabTipKey)) { New-Item -Path $tabTipKey -Force | Out-Null }
+    Set-ItemProperty -Path $tabTipKey -Name "UserKeyboardScalingFactor" -Value 180
+
+    # Wallpapers - Place in Original User's Pictures folder
+    $sourceDir = Join-Path $RepoRoot "wallpapers"
+    if (Test-Path $sourceDir) {
+        $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
+        if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
+        
+        $copiedFiles = Get-ChildItem -Path $sourceDir -File | ForEach-Object {
+            $dest = Join-Path $targetDir $_.Name
+            Copy-Item -Path $_.FullName -Destination $dest -Force
+            $dest
+        }
+        
+        # Set wallpaper for current session
+        $code = @'
+        using System.Runtime.InteropServices;
+        public class Wallpaper {
+            [DllImport("user32.dll", CharSet = CharSet.Auto)]
+            public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+        }
+'@
+        if (-not ([System.Management.Automation.PSTypeName]'Wallpaper').Type) { Add-Type -TypeDefinition $code }
+        if ($copiedFiles.Count -gt 0) { [Wallpaper]::SystemParametersInfo(20, 0, $copiedFiles[0], 3) }
+    }
 }
 
 # --- Installation Core ---
 function Install-WingetPackage {
-    param([string]$Id, [bool]$SystemWide = $true)
-    
+    param([string]$Id)
     $existing = winget list --exact --id $Id --accept-source-agreements 2>$null
     if ($LASTEXITCODE -eq 0 -and $existing -match [regex]::Escape($Id)) {
         Write-Step "Already installed: $Id"
         return
     }
 
-    if ($SystemWide) {
-        Write-Step "Installing System-Wide: $Id..."
-        winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine
-    } else {
-        Write-Step "Installing for User ($OriginalUserPath): $Id..."
-        $UserWingetScript = "winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope user"
-        Run-AsUser -ScriptContent $UserWingetScript -TaskName "Install-$($Id -replace '\.', '_')"
-    }
-}
-
-# --- Personalization ---
-function Apply-AllSettings {
-    param([string]$RepoRoot)
-    Write-Step "Applying Theme & Keyboard Settings to User Context..."
-
-    $UserRegScript = @"
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Force
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0 -Force
-    if (-not (Test-Path "HKCU:\Software\Microsoft\TabletTip\1.7")) { New-Item -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Force }
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Name "UserKeyboardScalingFactor" -Value 180 -Force
-"@
-    Run-AsUser -ScriptContent $UserRegScript -TaskName "ApplyUserRegistry"
-
-    # Wallpapers
-    $sourceDir = Join-Path $RepoRoot "wallpapers"
-    if (Test-Path $sourceDir) {
-        $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
-        if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
-        Get-ChildItem -Path $sourceDir -File | ForEach-Object { Copy-Item -Path $_.FullName -Destination (Join-Path $targetDir $_.Name) -Force }
-    }
-}
-
-# --- Taskbar ---
-function Configure-TaskbarLinks {
-    param([string]$Profile)
-    Write-Step "Configuring Taskbar Pins..."
+    Write-Step "Installing: $Id..."
+    $args = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine"
+    $process = Start-Process winget -ArgumentList $args -Wait -PassThru -NoNewWindow
     
-    $Apps = @(
-        "C:\Windows\explorer.exe",
-        "C:\Program Files\Google\Chrome\Application\chrome.exe",
-        "C:\Windows\System32\SnippingTool.exe",
-        "C:\Windows\System32\calc.exe"
-    )
-
-    if ($Profile -eq "Dev") {
-        $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Microsoft VS Code\Code.exe"
-        $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Joplin\Joplin.exe"
-        $Apps += "C:\Program Files\WezTerm\wezterm.exe"
-        $Apps += "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+    if ($process.ExitCode -ne 0) {
+        $fallbackArgs = "install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements"
+        Start-Process winget -ArgumentList $fallbackArgs -Wait -NoNewWindow
     }
-
-    $PinScript = @"
-    function Set-Pin {
-        param(`$Path)
-        if (-not (Test-Path `$Path)) { return }
-        `$shell = New-Object -ComObject Shell.Application
-        `$folder = `$shell.NameSpace((Split-Path `$Path))
-        `$item = `$folder.ParseName((Split-Path `$Path -Leaf))
-        `$verb = `$item.Verbs() | Where-Object { `$_.Id -eq 'taskbarpin' -or `$_.Name -replace '&','' -match '(Pin to taskbar)' }
-        if (`$verb) { `$verb.DoIt() }
-    }
-    @($( ($Apps | ForEach-Object { "'$_'" }) -join "," )) | ForEach-Object { Set-Pin -Path `$_ }
-"@
-    Run-AsUser -ScriptContent $PinScript -TaskName "PinTaskbarIcons"
 }
 
-# --- Configs & Dotfiles (No Links/Shortcuts) ---
 function Register-DevConfigs {
     param([string]$RepoRoot)
-    Write-Step "Copying Configuration Files to User folders..."
-    $TargetAppData = Join-Path $OriginalUserPath "AppData\Roaming"
+    Write-Step "Configuring Dev Environment for user: $OriginalUserPath"
+
+    $TargetHome = $OriginalUserPath
+    $TargetAppData = Join-Path $TargetHome "AppData\Roaming"
+    $TargetLocalData = Join-Path $TargetHome "AppData\Local"
 
     # 1. WezTerm
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) { 
-        Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force 
+    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $TargetHome ".wezterm.lua") -Force }
+
+    # 2. Alacritty
+    $alacrittySource = Join-Path $RepoRoot "dotfiles\alacritty\alacritty.toml"
+    $alacrittyDestDir = Join-Path $TargetAppData "alacritty"
+    if (Test-Path $alacrittySource) {
+        if (-not (Test-Path $alacrittyDestDir)) { New-Item -Path $alacrittyDestDir -ItemType Directory -Force | Out-Null }
+        Copy-Item -Path $alacrittySource -Destination (Join-Path $alacrittyDestDir "alacritty.toml") -Force
     }
 
-    # 2. Flow Launcher (Direct Copy + Permission Fix)
+    # 3. Flow Launcher
     $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
     $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
     if (Test-Path $flowSource) {
         if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
         Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
-        
-        $Acl = Get-Acl $flowDestDir
-        $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule((Get-CimInstance Win32_ComputerSystem).UserName, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-        $Acl.SetAccessRule($Ar)
-        Set-Acl $flowDestDir $Acl
     }
 
-    # 3. AutoHotkey (Direct File copy to Startup, not a link)
-    $ahkSource = Join-Path $RepoRoot "dotfiles\main.ahk"
-    if (Test-Path $ahkSource) {
-        $startupDir = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
-        # We copy the actual .ahk file into the startup folder so it runs on boot
-        Copy-Item -Path $ahkSource -Destination (Join-Path $startupDir "main.ahk") -Force
+    # 4. AHK Startup
+    $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
+    if (Test-Path $ahkScript) {
+        $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
+        if (Test-Path $ahkExe) {
+            $startupFolder = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
+            $wshShell = New-Object -ComObject WScript.Shell
+            $shortcut = $wshShell.CreateShortcut((Join-Path $startupFolder "main.ahk.lnk"))
+            $shortcut.TargetPath = $ahkExe
+            $shortcut.Arguments = "`"$ahkScript`""
+            $shortcut.Save()
+        }
     }
 }
 
-# --- Execution ---
+# --- Execution Controller ---
 function Invoke-WindowsInit {
     Ensure-Admin
-    winget source update
-    Install-WingetPackage -Id "Git.Git" -SystemWide $true
+    Install-WingetPackage -Id "Git.Git"
+    Refresh-ProcessPath
     
-    # Ensure Git is in Path for cloning
-    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
-
     if (-not (Test-Path $RepoCloneDir)) {
-        Write-Step "Cloning repository to Documents..."
+        Write-Step "Cloning repository to $RepoCloneDir..."
         git clone --depth 1 $RepoUrl $RepoCloneDir
     }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
-    $SystemApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", "Tailscale.Tailscale")
-    $UserApps = @("Flow-Launcher.Flow-Launcher", "Joplin.Joplin", "Microsoft.VisualStudioCode", "wez.wezterm", "AutoHotkey.AutoHotkey")
+    $BaseApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC")
+    $DevApps = @("wez.wezterm", "Alacritty.Alacritty", "Microsoft.VisualStudioCode", "AutoHotkey.AutoHotkey", "Flow-Launcher.Flow-Launcher")
 
     if (-not $InstallProfile) {
         Write-Host "`nSelect Profile (User: $OriginalUserPath):`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
@@ -192,240 +180,27 @@ function Invoke-WindowsInit {
     }
 
     switch ($InstallProfile) {
+        "SettingsOnly" { Apply-AllSettings -RepoRoot $repoRoot }
+        "BaseOnly" {
+            Apply-AllSettings -RepoRoot $repoRoot
+            foreach ($app in $BaseApps) { Install-WingetPackage -Id $app }
+        }
         "Dev" {
             Apply-AllSettings -RepoRoot $repoRoot
-            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
-            foreach ($app in $UserApps) { Install-WingetPackage -Id $app -SystemWide $false }
-            Configure-TaskbarLinks -Profile "Dev"
+            foreach ($app in ($BaseApps + $DevApps)) { Install-WingetPackage -Id $app }
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
         }
-        "BaseOnly" {
-            Apply-AllSettings -RepoRoot $repoRoot
-            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
-            Configure-TaskbarLinks -Profile "BaseOnly"
-        }
     }
 
-    Write-Step "Finished. Restarting Explorer..."
-    Stop-Process -Name explorer -Force
+    Write-Step "Bootstrap finished. Refreshing explorer..."
+    Get-Process explorer | Stop-Process -Force
 }
 
-try { Invoke-WindowsInit } 
-catch { Write-Failure "Error: $($_.Exception.Message)" } 
-finally { if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" } }param(
-    [string]$WslDistro = "Ubuntu",
-    # Clones directly to the User's Documents folder
-    [string]$RepoCloneDir = (Join-Path ([Environment]::GetFolderPath("MyDocuments")) "quickstart"),
-    [ValidateSet("SettingsOnly", "BaseOnly", "DevOnly", "Dev")]
-    [string]$InstallProfile,
-    [switch]$NoExitPrompt,
-    [string]$OriginalUserPath = $HOME
-)
-
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
-$RepoUrl = "https://github.com/shubymao/quickstart"
-
-# --- UI & Logging ---
-function Write-Step { param([string]$Message) Write-Host "[quickstart] $Message" -ForegroundColor Cyan }
-function Write-Failure { param([string]$Message) Write-Host "[quickstart] $Message" -ForegroundColor Red }
-
-# --- Admin Elevation ---
-function Ensure-Admin {
-    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-    if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { return }
-
-    Write-Step "Requesting administrator privileges..."
-    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
-    if ($PSBoundParameters.ContainsKey("InstallProfile")) { $arguments += @("-InstallProfile", $InstallProfile) }
-    $arguments += @("-OriginalUserPath", $HOME)
-    $arguments += @("-RepoCloneDir", $RepoCloneDir)
-
-    try {
-        Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Verb RunAs | Out-Null
-    } catch {
-        throw "Administrator privileges required."
-    }
-    exit 0
+try {
+    Invoke-WindowsInit
+} catch {
+    Write-Failure "Error: $($_.Exception.Message)"
+} finally {
+    if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" }
 }
-
-# --- User Context Bridge (Crucial for User Installs/Registry) ---
-function Run-AsUser {
-    param([string]$ScriptContent, [string]$TaskName = "QuickstartUserTask")
-    $TriggerScript = Join-Path $env:TEMP "$TaskName.ps1"
-    $ScriptContent | Out-File -FilePath $TriggerScript -Encoding utf8
-
-    $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
-    $Action = New-ScheduledTaskAction -Execute 'Powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$TriggerScript`""
-    $Principal = New-ScheduledTaskPrincipal -UserId $UserAccount -LogonType Interactive
-    
-    Register-ScheduledTask -TaskName $TaskName -Action $Action -Principal $Principal -Force | Out-Null
-    Start-ScheduledTask -TaskName $TaskName
-    
-    # Wait for completion (especially for Winget)
-    while ((Get-ScheduledTask -TaskName $TaskName).State -eq "Running") { Start-Sleep -Seconds 2 }
-    
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-    if (Test-Path $TriggerScript) { Remove-Item $TriggerScript -Force }
-}
-
-# --- Installation Core ---
-function Install-WingetPackage {
-    param([string]$Id, [bool]$SystemWide = $true)
-    
-    $existing = winget list --exact --id $Id --accept-source-agreements 2>$null
-    if ($LASTEXITCODE -eq 0 -and $existing -match [regex]::Escape($Id)) {
-        Write-Step "Already installed: $Id"
-        return
-    }
-
-    if ($SystemWide) {
-        Write-Step "Installing System-Wide: $Id..."
-        winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine
-    } else {
-        Write-Step "Installing for User ($OriginalUserPath): $Id..."
-        $UserWingetScript = "winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope user"
-        Run-AsUser -ScriptContent $UserWingetScript -TaskName "Install-$($Id -replace '\.', '_')"
-    }
-}
-
-# --- Personalization ---
-function Apply-AllSettings {
-    param([string]$RepoRoot)
-    Write-Step "Applying Theme & Keyboard Settings to User Context..."
-
-    $UserRegScript = @"
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Force
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0 -Force
-    if (-not (Test-Path "HKCU:\Software\Microsoft\TabletTip\1.7")) { New-Item -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Force }
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Name "UserKeyboardScalingFactor" -Value 180 -Force
-"@
-    Run-AsUser -ScriptContent $UserRegScript -TaskName "ApplyUserRegistry"
-
-    # Wallpapers
-    $sourceDir = Join-Path $RepoRoot "wallpapers"
-    if (Test-Path $sourceDir) {
-        $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
-        if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
-        Get-ChildItem -Path $sourceDir -File | ForEach-Object { Copy-Item -Path $_.FullName -Destination (Join-Path $targetDir $_.Name) -Force }
-    }
-}
-
-# --- Taskbar ---
-function Configure-TaskbarLinks {
-    param([string]$Profile)
-    Write-Step "Configuring Taskbar Pins..."
-    
-    $Apps = @(
-        "C:\Windows\explorer.exe",
-        "C:\Program Files\Google\Chrome\Application\chrome.exe",
-        "C:\Windows\System32\SnippingTool.exe",
-        "C:\Windows\System32\calc.exe"
-    )
-
-    if ($Profile -eq "Dev") {
-        $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Microsoft VS Code\Code.exe"
-        $Apps += Join-Path $OriginalUserPath "AppData\Local\Programs\Joplin\Joplin.exe"
-        $Apps += "C:\Program Files\WezTerm\wezterm.exe"
-        $Apps += "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-    }
-
-    $PinScript = @"
-    function Set-Pin {
-        param(`$Path)
-        if (-not (Test-Path `$Path)) { return }
-        `$shell = New-Object -ComObject Shell.Application
-        `$folder = `$shell.NameSpace((Split-Path `$Path))
-        `$item = `$folder.ParseName((Split-Path `$Path -Leaf))
-        `$verb = `$item.Verbs() | Where-Object { `$_.Id -eq 'taskbarpin' -or `$_.Name -replace '&','' -match '(Pin to taskbar)' }
-        if (`$verb) { `$verb.DoIt() }
-    }
-    @($( ($Apps | ForEach-Object { "'$_'" }) -join "," )) | ForEach-Object { Set-Pin -Path `$_ }
-"@
-    Run-AsUser -ScriptContent $PinScript -TaskName "PinTaskbarIcons"
-}
-
-# --- Configs & Dotfiles (No Links/Shortcuts) ---
-function Register-DevConfigs {
-    param([string]$RepoRoot)
-    Write-Step "Copying Configuration Files to User folders..."
-    $TargetAppData = Join-Path $OriginalUserPath "AppData\Roaming"
-
-    # 1. WezTerm
-    $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) { 
-        Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force 
-    }
-
-    # 2. Flow Launcher (Direct Copy + Permission Fix)
-    $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
-    $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
-    if (Test-Path $flowSource) {
-        if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
-        Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
-        
-        $Acl = Get-Acl $flowDestDir
-        $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule((Get-CimInstance Win32_ComputerSystem).UserName, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-        $Acl.SetAccessRule($Ar)
-        Set-Acl $flowDestDir $Acl
-    }
-
-    # 3. AutoHotkey (Direct File copy to Startup, not a link)
-    $ahkSource = Join-Path $RepoRoot "dotfiles\main.ahk"
-    if (Test-Path $ahkSource) {
-        $startupDir = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
-        # We copy the actual .ahk file into the startup folder so it runs on boot
-        Copy-Item -Path $ahkSource -Destination (Join-Path $startupDir "main.ahk") -Force
-    }
-}
-
-# --- Execution ---
-function Invoke-WindowsInit {
-    Ensure-Admin
-    winget source update
-    Install-WingetPackage -Id "Git.Git" -SystemWide $true
-    
-    # Ensure Git is in Path for cloning
-    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
-
-    if (-not (Test-Path $RepoCloneDir)) {
-        Write-Step "Cloning repository to Documents..."
-        git clone --depth 1 $RepoUrl $RepoCloneDir
-    }
-    $repoRoot = (Resolve-Path $RepoCloneDir).Path
-
-    $SystemApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", "Tailscale.Tailscale")
-    $UserApps = @("Flow-Launcher.Flow-Launcher", "Joplin.Joplin", "Microsoft.VisualStudioCode", "wez.wezterm", "AutoHotkey.AutoHotkey")
-
-    if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile (User: $OriginalUserPath):`n1) SettingsOnly`n2) BaseOnly`n3) Dev" -ForegroundColor Yellow
-        $choice = Read-Host "Choice"
-        $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
-    }
-
-    switch ($InstallProfile) {
-        "Dev" {
-            Apply-AllSettings -RepoRoot $repoRoot
-            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
-            foreach ($app in $UserApps) { Install-WingetPackage -Id $app -SystemWide $false }
-            Configure-TaskbarLinks -Profile "Dev"
-            Register-DevConfigs -RepoRoot $repoRoot
-            wsl --install --no-distribution 2>$null
-        }
-        "BaseOnly" {
-            Apply-AllSettings -RepoRoot $repoRoot
-            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
-            Configure-TaskbarLinks -Profile "BaseOnly"
-        }
-    }
-
-    Write-Step "Finished. Restarting Explorer..."
-    Stop-Process -Name explorer -Force
-}
-
-try { Invoke-WindowsInit } 
-catch { Write-Failure "Error: $($_.Exception.Message)" } 
-finally { if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" } }
