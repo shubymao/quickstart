@@ -192,8 +192,24 @@ function Invoke-WindowsInit {
     }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
-    $BaseApps = @("Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", "VideoLAN.VLC", "GIMP.GIMP", "PDFgear.PDFgear", "tailscale.tailscale")
-    $DevApps = @("Wez.WezTerm", "Alacritty.Alacritty", "Microsoft.VisualStudioCode", "Oracle.VirtualBox", "AutoHotkey.AutoHotkey")
+    $BaseApps = @(
+        "Mozilla.Firefox", 
+        "Google.Chrome", 
+        "Brave.Brave", 
+        "7zip.7zip", 
+        "VideoLAN.VLC", 
+        "GIMP.GIMP",        # Verified ID
+        "PDFgear.PDFgear", 
+        "Tailscale.Tailscale" # Capitalized
+    )
+
+    $DevApps = @(
+        "wez.wezterm",      # Lowercase/Verified ID
+        "Alacritty.Alacritty", 
+        "Microsoft.VisualStudioCode", 
+        "Oracle.VirtualBox", 
+        "AutoHotkey.AutoHotkey"
+    )
 
     if (-not $InstallProfile) {
         Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly (Settings + Base Apps)`n3) DevOnly (Settings + Base + Dev Apps)" -ForegroundColor Yellow
