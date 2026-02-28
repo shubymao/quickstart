@@ -91,14 +91,11 @@ GoToDesktopNumber(num) {
 ; Map Hyper Key (Ctrl+Alt+Shift+Win) + Space
 ^!+#Space::
 {
-    localAppData := EnvGet("LocalAppData")
-    targetPath := localAppData . "\FlowLauncher\app-2.0.3\Flow.Launcher.exe"
-    
-    if FileExist(targetPath) {
-        Run('"' targetPath '" --toggle')
-    } else {
-        MsgBox("Path not found: " . targetPath)
-    }
+    Send("!{Space}")
+}
+^!+#c::
+{
+    Send("!{Space}cb{Space}")
 }
 ^!+#d::     Send("#{d}")     ; Win + D
 ^!+#q::     Send("!{F4}")    ; Alt + F4
