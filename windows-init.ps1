@@ -158,6 +158,116 @@ function Install-JetBrainsMonoNerdFont {
     }
 }
 
+function Install-VDALibrary {
+    param([string]$RepoRoot)
+    Write-Step "Installing VirtualDesktopAccessor.dll..."
+
+    # Define paths
+    $sourceDll = Join-Path $RepoRoot "lib\VirtualDesktopAccessor.dll"
+    $destFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "AutoHotkey\Lib"
+    $destFile = Join-Path $destFolder "VirtualDesktopAccessor.dll"
+
+    if (Test-Path $sourceDll) {
+        # Create folder if it doesn't exist
+        if (-not (Test-Path $destFolder)) {
+            New-Item -Path $destFolder -ItemType Directory -Force | Out-Null
+            Write-Step "Created directory: $destFolder"
+        }
+
+        # Copy the file
+        Copy-Item -Path $sourceDll -Destination $destFile -Force
+        Write-Host "    Successfully copied DLL to $destFile" -ForegroundColor Green
+    } else {
+        Write-Failure "Source DLL not found at $sourceDll"
+    }
+}
+
+function Install-TouchScripts {
+    param([string]$RepoRoot)
+    Write-Step "Installing Touch Toggle scripts..."
+
+    # Define paths
+    $userProfile = [Environment]::GetFolderPath("UserProfile")
+    $destFolder = Join-Path $userProfile "Scripts"
+    $sourceDir = Join-Path $RepoRoot "scripts"
+
+    # Create destination folder if it doesn't exist
+    if (-not (Test-Path $destFolder)) {
+        New-Item -Path $destFolder -ItemType Directory -Force | Out-Null
+        Write-Step "Created directory: $destFolder"
+    }
+
+    $filesToCopy = @("toggle_touch.cmd", "toggle_touch.ps1")
+
+    foreach ($file in $filesToCopy) {
+        $src = Join-Path $sourceDir $file
+        $dest = Join-Path $destFolder $file
+
+        if (Test-Path $src) {
+            Copy-Item -Path $src -Destination $dest -Force
+            Write-Host "    Copied $file to $dest" -ForegroundColor Green
+        } else {
+            Write-Warning "Source file not found: $src"
+        }
+    }
+}
+
+function Set-TaskbarPin {
+    param(
+        [Parameter(Mandatory=$true)][string]$FilePath,
+        [Parameter(Mandatory=$true)][ValidateSet("Pin", "Unpin")][string]$Action
+    )
+    
+    if (-not (Test-Path $FilePath)) {
+        Write-Warning "Cannot pin $FilePath - Path not found."
+        return
+    }
+
+    $shell = New-Object -ComObject Shell.Application
+    $folder = $shell.NameSpace((Split-Path $FilePath))
+    $item = $folder.ParseName((Split-Path $FilePath -Leaf))
+    $verbs = $item.Verbs()
+
+    # Find the localized string for Pin/Unpin
+    $verbName = if ($Action -eq "Pin") { "taskbarpin" } else { "taskbarunpin" }
+    $verb = $verbs | Where-Object { $_.Id -eq $verbName -or $_.Name -replace '&','' -match "(Pin to taskbar|Unpin from taskbar)" }
+
+    if ($verb) {
+        $verb.DoIt()
+    }
+}
+
+function Configure-TaskbarLinks {
+    param([string]$Profile)
+    Write-Step "Configuring Taskbar Pins..."
+
+    # Common Paths
+    $Explorer = "C:\Windows\explorer.exe"
+    $Chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+    $Firefox = "C:\Program Files\Mozilla Firefox\firefox.exe"
+    $Brave = "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
+    $SnippingTool = "C:\Windows\System32\SnippingTool.exe"
+    $Calculator = "C:\Windows\System32\calc.exe"
+    
+    # Dev Paths
+    $PowerShell = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+    $WezTerm = "$env:ProgramFiles\WezTerm\wezterm.exe"
+    $Alacritty = "$env:ProgramFiles\Alacritty\alacritty.exe"
+    $VSCode = "$env:LocalAppdata\Programs\Microsoft VS Code\Code.exe"
+    $Joplin = "$env:LocalAppdata\Programs\Joplin\Joplin.exe"
+
+    $BasePins = @($Explorer, $Chrome, $Firefox, $Brave, $SnippingTool, $Calculator)
+    $DevPins = @($PowerShell, $WezTerm, $Alacritty, $VSCode, $Joplin)
+
+    # Pin Base apps
+    foreach ($app in $BasePins) { Set-TaskbarPin -FilePath $app -Action "Pin" }
+
+    # Pin Dev apps if applicable
+    if ($Profile -eq "Dev") {
+        foreach ($app in $DevPins) { Set-TaskbarPin -FilePath $app -Action "Pin" }
+    }
+}
+
 function Register-DevConfigs {
     param([string]$RepoRoot)
     Write-Step "Configuring Dev Environment..."
@@ -183,6 +293,8 @@ function Register-DevConfigs {
     }
 
     # 4. AutoHotkey Startup Registration
+    Install-VDALibrary -RepoRoot $repoRoot
+    Install-TouchScripts -RepoRoot $repoRoot
     $ahkScript = Join-Path $RepoRoot "dotfiles\main.ahk"
     if (Test-Path $ahkScript) {
         $ahkExe = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
@@ -231,10 +343,12 @@ function Invoke-WindowsInit {
         "BaseOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $BaseApps) { Install-WingetPackage -Id $app }
+            Configure-TaskbarLinks -Profile "BaseOnly"
         }
         "Dev" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in ($BaseApps + $DevApps)) { Install-WingetPackage -Id $app }
+            Configure-TaskbarLinks -Profile "Dev"
             Install-JetBrainsMonoNerdFont
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
