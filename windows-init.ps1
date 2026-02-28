@@ -1,5 +1,6 @@
 param(
-    [string]$WslDistro = "Ubuntu"
+    [string]$WslDistro = "Ubuntu",
+    [string]$RepoCloneDir = (Join-Path $HOME "quickstart")
 )
 
 Set-StrictMode -Version Latest
@@ -62,6 +63,30 @@ function Install-WingetPackage {
 
     Write-Step "Installing package: $Id"
     winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements
+}
+
+function Ensure-GitInstalled {
+    Install-WingetPackage -Id "Git.Git"
+    Require-Command -Name "git"
+}
+
+function Clone-Repo {
+    param(
+        [string]$RepoUrl,
+        [string]$Branch,
+        [string]$Destination
+    )
+
+    if (Test-Path $Destination) {
+        if (Test-Path (Join-Path $Destination ".git")) {
+            Write-Step "Repo already cloned: $Destination"
+            return
+        }
+        throw "Destination exists but is not a git repo: $Destination"
+    }
+
+    Write-Step "Cloning repo to $Destination (shallow, faster)"
+    git clone --depth 1 --filter=blob:none --single-branch --branch $Branch $RepoUrl $Destination
 }
 
 function Get-InstallProfile {
@@ -506,12 +531,12 @@ function Configure-AppShortcuts {
 }
 
 Ensure-Admin
-
-Ensure-Admin
+Require-Command -Name "winget"
+Ensure-GitInstalled
+Clone-Repo -RepoUrl $RepoUrl -Branch $RepoBranch -Destination $RepoCloneDir
 
 Write-Step "Preparing standalone assets"
 $repoRoot = Get-RepoAssetsRoot -RepoUrl $RepoUrl -Branch $RepoBranch
-Require-Command -Name "winget"
 $InstallProfile = Get-InstallProfile
 $isDevProfile = $InstallProfile -eq "Dev"
 $InstallMode = Get-InstallMode
