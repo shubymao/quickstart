@@ -1,7 +1,3 @@
-general.import = [
-    "~/.config/alacritty/themes/themes/coolnight.toml"
-]
-
 [env]
 TERM = "xterm-256color"
 
@@ -15,5 +11,35 @@ decorations = "Buttonless"
 normal.family = "JetBrainsMono Nerd Font"
 size = 24
 
-# For video (Uncomment to use)
-# size = 35.0
+# --- Integrated Cool Night Theme ---
+[colors.primary]
+background = '#0f111a'
+foreground = '#ffffff'
+
+[colors.cursor]
+text = '#0f111a'
+cursor = '#ffffff'
+
+[colors.normal]
+black   = '#000000'
+red     = '#f43e5e'
+green   = '#27d797'
+yellow  = '#fab753'
+blue    = '#2196f3'
+magenta = '#794fc1'
+cyan    = '#25d1cb'
+white   = '#ffffff'
+
+[colors.bright]
+black   = '#000000'
+red     = '#f43e5e'
+green   = '#27d797'
+yellow  = '#fab753'
+blue    = '#2196f3'
+magenta = '#794fc1'
+cyan    = '#25d1cb'
+white   = '#ffffff'
+
+[colors.selection]
+text = '#ffffff'
+background = '#1b1e2b'
