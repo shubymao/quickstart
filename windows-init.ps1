@@ -29,7 +29,7 @@ function Install-UserApps {
 
     # Define User-Level apps (Always installed in User Scope)
     $BaseUserApps = @("Nextcloud.NextcloudDesktop")
-    $DevUserApps = @("wez.wezterm", "Flow-Launcher.Flow-Launcher") 
+    $DevUserApps = @("wez.wezterm", "Flow-Launcher.Flow-Launcher", "AutoHotkey.AutoHotkey") 
 
     $AppsToInstall = @()
     if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") { $AppsToInstall += $BaseUserApps }
