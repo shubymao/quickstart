@@ -28,7 +28,7 @@ function Install-UserApps {
     }
 
     # Define User-Level apps (Always installed in User Scope)
-    $BaseUserApps = @()
+    $BaseUserApps = @("Nextcloud.NextcloudDesktop")
     $DevUserApps = @("wez.wezterm", "Flow-Launcher.Flow-Launcher") 
 
     $AppsToInstall = @()
@@ -147,7 +147,7 @@ function Invoke-WindowsInit {
     $SystemApps = @(
         "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", 
         "VideoLAN.VLC", "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale", 
-        "Nextcloud.NextcloudDesktop", "Jellyfin.JellyfinMediaPlayer", 
+        "Jellyfin.JellyfinMediaPlayer", 
         "TheDocumentFoundation.LibreOffice", "SyncTrayzor.SyncTrayzor", 
         "LAB02Research.HASSAgent", "Proton.ProtonVPN", "Oracle.VirtualBox"
     )

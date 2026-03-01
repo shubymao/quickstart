@@ -22,7 +22,7 @@ end
 config.font_size = 18
 
 -- disable this to prevent tabs
-config.enable_tab_bar = false
+config.enable_tab_bar = true
 
 config.window_decorations = "TITLE | RESIZE"
 
