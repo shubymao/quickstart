@@ -54,7 +54,7 @@ function Ensure-Admin {
     $currentHome = $HOME 
     $targetDocs = if ([string]::IsNullOrEmpty($RepoCloneDir)) { Join-Path $currentHome "Documents\quickstart" } else { $RepoCloneDir }
 
-    $scriptUrl = "https://raw.githubusercontent.com/shubymao/quickstart/main/scripts/win-init.ps1"
+    $scriptUrl = "https://raw.githubusercontent.com/shubymao/quickstart/main/scripts/win-init.ps1?$([guid]::NewGuid().ToString())"
     $tempScript = Join-Path $env:TEMP "quickstart-win-init.ps1"
     if (-not (Test-Path $tempScript)) {
         Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
