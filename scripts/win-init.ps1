@@ -1,10 +1,10 @@
 param(
     [string]$WslDistro = "Ubuntu",
     [string]$RepoCloneDir = "", 
-    [ValidateSet("SettingsOnly", "BaseOnly", "Dev")]
+    [AllowNull()]
     [string]$InstallProfile,
     [switch]$NoExitPrompt,
-    [switch]$SkipUserInstall, # New flag to prevent recursion/duplicate installs
+    [switch]$SkipUserInstall,
     [string]$OriginalUserPath = $HOME
 )
 
