@@ -4,6 +4,7 @@ param(
     [ValidateSet("SettingsOnly", "BaseOnly", "Dev")]
     [string]$InstallProfile,
     [switch]$NoExitPrompt,
+    [switch]$SkipUserInstall, # New flag to prevent recursion/duplicate installs
     [string]$OriginalUserPath = $HOME
 )
 
@@ -16,81 +17,78 @@ $RepoUrl = "https://github.com/shubymao/quickstart"
 function Write-Step { param([string]$Message) Write-Host "`n[quickstart] $Message" -ForegroundColor Cyan }
 function Write-Failure { param([string]$Message) Write-Host "[quickstart] $Message" -ForegroundColor Red }
 
-# --- Admin Elevation (The Handshake) ---
+# --- 1. User-Level Installation Logic ---
+function Install-UserApps {
+    param([string]$Profile)
+    
+    # If the skip flag is present, we get out immediately
+    if ($SkipUserInstall) { 
+        Write-Step "Skipping User-Level Apps (already processed or requested skip)."
+        return 
+    }
+
+    # Define User-Level apps (Always installed in User Scope)
+    $BaseUserApps = @()
+    $DevUserApps = @("wez.wezterm", "Flow-Launcher.Flow-Launcher") 
+
+    $AppsToInstall = @()
+    if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") { $AppsToInstall += $BaseUserApps }
+    if ($Profile -eq "Dev") { $AppsToInstall += $DevUserApps }
+
+    if ($AppsToInstall.Count -gt 0) {
+        Write-Step "Phase 1: Installing User-Level Applications..."
+        foreach ($AppId in $AppsToInstall) {
+            Write-Host "Installing $AppId (User Scope)..." -ForegroundColor Gray
+            winget install --exact --id $AppId --silent --accept-package-agreements --accept-source-agreements
+        }
+    }
+}
+
+# --- 2. Admin Elevation (The Handshake) ---
 function Ensure-Admin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { return }
 
-    Write-Step "Requesting administrator privileges..."
+    Write-Step "Phase 2: Requesting administrator privileges..."
     $currentHome = $HOME 
-    $targetDocs = Join-Path $currentHome "Documents\quickstart"
+    $targetDocs = if ([string]::IsNullOrEmpty($RepoCloneDir)) { Join-Path $currentHome "Documents\quickstart" } else { $RepoCloneDir }
 
+    # We explicitly add -SkipUserInstall to the arguments for the elevated process
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
-    if ($PSBoundParameters.ContainsKey("InstallProfile")) { $arguments += @("-InstallProfile", $InstallProfile) }
+    if ($null -ne $InstallProfile) { $arguments += @("-InstallProfile", $InstallProfile) }
     $arguments += @("-OriginalUserPath", $currentHome)
     $arguments += @("-RepoCloneDir", $targetDocs)
+    $arguments += "-SkipUserInstall" 
 
     try {
         Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Verb RunAs | Out-Null
     } catch {
-        throw "Administrator privileges required."
+        throw "Administrator privileges required for system-wide installs."
     }
     exit 0
 }
 
-# --- User Context Bridge (Crucial for Non-Admin Apps like Flow Launcher) ---
-function Run-AsUser {
-    param([string]$ScriptContent, [string]$TaskName = "QuickstartUserTask")
-    
-    $SanitizedTaskName = $TaskName -replace '[.\-]', '_'
-    $TriggerScript = Join-Path $env:TEMP "$SanitizedTaskName.ps1"
-    $ScriptContent | Out-File -FilePath $TriggerScript -Encoding utf8
-
-    $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
-    $Action = New-ScheduledTaskAction -Execute 'Powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$TriggerScript`""
-    $Principal = New-ScheduledTaskPrincipal -UserId $UserAccount -LogonType Interactive
-    
-    Register-ScheduledTask -TaskName $SanitizedTaskName -Action $Action -Principal $Principal -Force | Out-Null
-    Start-ScheduledTask -TaskName $SanitizedTaskName
-    
-    while ((Get-ScheduledTask -TaskName $SanitizedTaskName).State -eq "Running") { Start-Sleep -Seconds 2 }
-    
-    Unregister-ScheduledTask -TaskName $SanitizedTaskName -Confirm:$false
-    if (Test-Path $TriggerScript) { Remove-Item $TriggerScript -Force }
-}
-
-# --- Installation Core ---
+# --- 3. System-Level Logic ---
 function Install-WingetPackage {
-    param([string]$Id, [bool]$SystemWide = $true)
-    
+    param([string]$Id)
     $existing = winget list --exact --id $Id --accept-source-agreements 2>$null
     if ($LASTEXITCODE -eq 0 -and $existing -match [regex]::Escape($Id)) {
-        Write-Step "Already installed: $Id"
+        Write-Host "Already installed: $Id" -ForegroundColor Gray
         return
     }
-
-    if ($SystemWide) {
-        Write-Step "Installing System-Wide: $Id..."
-        winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine
-    } else {
-        Write-Step "Installing for User (Non-Admin): $Id..."
-        $UserWingetScript = "winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope user"
-        Run-AsUser -ScriptContent $UserWingetScript -TaskName "Install_$Id"
-    }
+    Write-Step "Installing System-Wide: $Id..."
+    winget install --exact --id $Id --silent --accept-package-agreements --accept-source-agreements --scope machine
 }
 
-# --- Personalization & Registry ---
 function Apply-AllSettings {
     param([string]$RepoRoot)
-    Write-Step "Applying Theme & Keyboard Settings..."
-    $UserRegScript = @"
+    Write-Step "Applying Registry & Personalization..."
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0 -Force
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0 -Force
+    
     if (-not (Test-Path "HKCU:\Software\Microsoft\TabletTip\1.7")) { New-Item -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Force }
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Name "UserKeyboardScalingFactor" -Value 180 -Force
-"@
-    Run-AsUser -ScriptContent $UserRegScript -TaskName "ApplyUserRegistry"
 
     $sourceDir = Join-Path $RepoRoot "wallpapers"
     if (Test-Path $sourceDir) {
@@ -100,55 +98,52 @@ function Apply-AllSettings {
     }
 }
 
-# --- Configs & Dotfiles ---
 function Register-DevConfigs {
     param([string]$RepoRoot)
     Write-Step "Syncing Dotfiles..."
-    $TargetAppData = Join-Path $OriginalUserPath "AppData\Roaming"
-
-    # 1. WezTerm (.wezterm.lua)
+    
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) { 
-        Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force 
-    }
+    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
 
-    # 2. Flow Launcher (Settings.json)
     $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
-    $flowDestDir = Join-Path $TargetAppData "FlowLauncher\Settings"
+    $flowDestDir = Join-Path $OriginalUserPath "AppData\Roaming\FlowLauncher\Settings"
     if (Test-Path $flowSource) {
         if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
         Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
-        
-        $UserAccount = (Get-CimInstance Win32_ComputerSystem).UserName
-        $Acl = Get-Acl $flowDestDir
-        $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule($UserAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-        $Acl.SetAccessRule($Ar)
-        Set-Acl $flowDestDir $Acl
     }
 
-    # 3. AutoHotkey (Direct Copy to Startup)
-    $ahkSource = Join-Path $RepoRoot "dotfiles\main.ahk"
+    $ahkSource = Join-Path $RepoRoot "dotfiles\autohotkey\main.ahk"
     if (Test-Path $ahkSource) {
-        $startupDir = Join-Path $TargetAppData "Microsoft\Windows\Start Menu\Programs\Startup"
-        if (-not (Test-Path $startupDir)) { New-Item -Path $startupDir -ItemType Directory -Force | Out-Null }
-        Write-Step "Copying main.ahk to Startup folder..."
+        $startupDir = Join-Path $OriginalUserPath "AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
         Copy-Item -Path $ahkSource -Destination (Join-Path $startupDir "main.ahk") -Force
     }
 }
 
-# --- Execution ---
+# --- 4. Main Execution Flow ---
 function Invoke-WindowsInit {
+    # Phase 1: Interactive Choice
+    if (-not $InstallProfile) {
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full Setup)" -ForegroundColor Yellow
+        $choice = Read-Host "Choice"
+        $script:InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
+    }
+
+    # Phase 2: User-Level Installs (Will skip if -SkipUserInstall is passed)
+    Install-UserApps -Profile $InstallProfile
+
+    # Phase 3: Elevate for System Tasks (Adds -SkipUserInstall to next process)
     Ensure-Admin
-    
-    # 1. Base Git & Path Prep
-    Install-WingetPackage -Id "Git.Git" -SystemWide $true
-    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+
+    # Phase 4: Git & Repo Setup
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Install-WingetPackage -Id "Git.Git"
+    }
     
     if ([string]::IsNullOrEmpty($RepoCloneDir)) { $RepoCloneDir = Join-Path $OriginalUserPath "Documents\quickstart" }
     if (-not (Test-Path $RepoCloneDir)) { git clone --depth 1 $RepoUrl $RepoCloneDir }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
-    # 2. Complete App Inventories
+    # Phase 5: Package Lists
     $SystemApps = @(
         "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", 
         "VideoLAN.VLC", "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale", 
@@ -156,34 +151,20 @@ function Invoke-WindowsInit {
         "TheDocumentFoundation.LibreOffice", "SyncTrayzor.SyncTrayzor", 
         "LAB02Research.HASSAgent", "Proton.ProtonVPN", "Oracle.VirtualBox"
     )
-    
-    $UserApps = @(
-        "Flow-Launcher.Flow-Launcher", 
-        "Joplin.Joplin", 
-        "Microsoft.VisualStudioCode", 
-        "wez.wezterm", 
-        "Alacritty.Alacritty",
-        "AutoHotkey.AutoHotkey"
-    )
+    $DevApps = @("Joplin.Joplin", "Microsoft.VisualStudioCode", "Alacritty.Alacritty")
 
-    if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full Setup)" -ForegroundColor Yellow
-        $choice = Read-Host "Choice"
-        $InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
-    }
-
-    # 3. Process Profile
+    # Phase 6: Execute Profile Logic
     switch ($InstallProfile) {
         "Dev" {
             Apply-AllSettings -RepoRoot $repoRoot
-            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
-            foreach ($app in $UserApps) { Install-WingetPackage -Id $app -SystemWide $false }
+            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app }
+            foreach ($app in $DevApps) { Install-WingetPackage -Id $app }
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
         }
         "BaseOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
-            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app -SystemWide $true }
+            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app }
         }
         "SettingsOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
