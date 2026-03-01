@@ -1,34 +1,33 @@
 return {
+  -- 1. Setup the compatibility layer for nvim-cmp sources
   {
     "saghen/blink.compat",
-    -- use the latest release, via version = '*', if you also use the latest release for blink.cmp
     version = "*",
-    -- lazy.nvim will automatically load the plugin when it's required by blink.cmp
     lazy = true,
-    -- make sure to set opts so that lazy.nvim calls blink.compat's setup
     opts = {},
   },
+
+  -- 2. Setup the main completion engine
   {
     "saghen/blink.cmp",
-    version = "0.*",
-    dependencies = { { "f3fora/cmp-spell" } },
+    version = "*", -- Use latest to stay in sync with LazyVim updates
+    dependencies = { "f3fora/cmp-spell" },
+
     opts = {
+      keymap = {
+        preset = "default",
+        -- You can add custom keys here if you want (e.g. ['<Tab>'] = { 'select_next', 'fallback' })
+      },
+
+      -- Define your completion sources
       sources = {
         default = { "lsp", "path", "snippets", "buffer", "spell" },
         providers = {
-          -- create provider
+          -- Configure the 'spell' source via blink.compat
           spell = {
-            -- IMPORTANT: use the same name as you would for nvim-cmp
             name = "spell",
             module = "blink.compat.source",
-
-            -- all blink.cmp source config options work as normal:
             score_offset = -3,
-
-            -- this table is passed directly to the proxied completion source
-            -- as the `option` field in nvim-cmp's source config
-            --
-            -- this is NOT the same as the opts in a plugin's lazy.nvim spec
             opts = {
               keep_all_entries = false,
               enable_in_context = function()
@@ -38,6 +37,11 @@ return {
             },
           },
         },
+      },
+
+      -- Optional: Enable ghost text (previewing the completion in gray)
+      completion = {
+        ghost_text = { enabled = true },
       },
     },
   },
