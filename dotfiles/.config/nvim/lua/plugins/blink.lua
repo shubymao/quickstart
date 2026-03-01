@@ -1,5 +1,5 @@
 return {
-  -- 1. Setup the compatibility layer for nvim-cmp sources
+  -- 1. Compatibility layer for nvim-cmp sources (like cmp-spell)
   {
     "saghen/blink.compat",
     version = "*",
@@ -7,23 +7,29 @@ return {
     opts = {},
   },
 
-  -- 2. Setup the main completion engine
+  -- 2. Main Blink Configuration
   {
     "saghen/blink.cmp",
-    version = "*", -- Use latest to stay in sync with LazyVim updates
+    version = "*",
     dependencies = { "f3fora/cmp-spell" },
 
+    ---@module 'blink.cmp'
+    ---@type blink.Config
     opts = {
       keymap = {
         preset = "default",
-        -- You can add custom keys here if you want (e.g. ['<Tab>'] = { 'select_next', 'fallback' })
       },
 
-      -- Define your completion sources
+      -- Fix for potential 'ipairs' errors in cmdline mode
+      completion = {
+        menu = { auto_show = true },
+        ghost_text = { enabled = true },
+      },
+
+      -- Your custom sources
       sources = {
         default = { "lsp", "path", "snippets", "buffer", "spell" },
         providers = {
-          -- Configure the 'spell' source via blink.compat
           spell = {
             name = "spell",
             module = "blink.compat.source",
@@ -38,11 +44,8 @@ return {
           },
         },
       },
-
-      -- Optional: Enable ghost text (previewing the completion in gray)
-      completion = {
-        ghost_text = { enabled = true },
-      },
     },
+    -- This ensures our opts are merged correctly with LazyVim's
+    opts_extend = { "sources.default" },
   },
 }
