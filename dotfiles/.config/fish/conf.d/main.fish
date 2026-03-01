@@ -1,5 +1,5 @@
 # Add Path
-fish_add_path ~/.local/bin
+fish_add_path $HOME/.local/bin
 
 #######################################################
 # GENERAL UTILITIES
@@ -39,10 +39,13 @@ alias bbbb='cd ../../../..'
 alias bd='cd $OLDPWD'
 alias web='cd /var/www/html'
 
-# Zoxide integration (if installed)
-if command -v zoxide >/dev/null
+# Zoxide integration (Portable & Dynamic)
+if test -x "$HOME/.local/bin/zoxide"
+    $HOME/.local/bin/zoxide init fish | source
+    $HOME/.local/bin/zoxide init fish --cmd cd | source
+else if command -v zoxide >/dev/null
+    zoxide init fish --cmd cd | source
     zoxide init fish | source
-    alias cd="z"
 end
 
 #######################################################
@@ -166,4 +169,3 @@ alias ssh-start="eval (ssh-agent -c)"
 
 # Quickly edit ssh config
 alias ssh-conf="v ~/.ssh/config"
-
