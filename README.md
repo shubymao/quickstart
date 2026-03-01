@@ -45,7 +45,7 @@ From an elevated PowerShell (Run as Administrator), run:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
-.\windows-init.ps1
+.\universal.ps1
 ```
 
 The script prompts at startup for:
@@ -70,7 +70,7 @@ What this installs/configures:
 Optional distro override:
 
 ```powershell
-.\windows-init.ps1 -WslDistro "Ubuntu-24.04"
+.\universal.ps1 -WslDistro "Ubuntu-24.04"
 ```
 
 ## Fedora Desktop Quick Setup
