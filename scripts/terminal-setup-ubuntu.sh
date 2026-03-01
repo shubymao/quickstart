@@ -35,7 +35,7 @@ install_neovim_from_source() {
   fi
 
   log "Building Neovim from source (Stable branch)..."
-  
+
   # Build dependencies
   sudo apt-get install -y \
     ninja-build gettext libtool libtool-bin \
@@ -59,11 +59,11 @@ install_neovim_from_source() {
 
   make CMAKE_BUILD_TYPE=RelWithDebInfo
   sudo make install
-  
+
   # Clear stale Lua cache/state to prevent Snacks/Lualine errors
   rm -rf ~/.local/share/nvim/luacache
   rm -rf ~/.local/state/nvim/lazy
-  
+
   log "Success: Neovim installed from source."
 }
 
@@ -89,20 +89,20 @@ install_zoxide() {
   curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
 }
 
-install_aliases() {
+install_fish_conf() {
   local repo_root="$1"
   # Target path for Fish auto-loading configs
   local fish_conf_dir="$HOME/.config/fish/conf.d"
   # Source path based on your folder structure
-  local source_fish_aliases="$repo_root/dotfiles/.config/fish/conf.d/aliases.fish"
+  local source_fish_config="$repo_root/dotfiles/.config/fish/conf.d/main.fish"
 
   mkdir -p "$fish_conf_dir"
 
-  if [[ -f "$source_fish_aliases" ]]; then
-    cp -f "$source_fish_aliases" "$fish_conf_dir/aliases.fish"
-    log "Success: Copied Fish aliases from $source_fish_aliases"
+  if [[ -f "$source_fish_config" ]]; then
+    cp -f "$source_fish_config" "$fish_conf_dir/main.fish"
+    log "Success: Copied Fish conf from $source_fish_config"
   else
-    log "[error] Source aliases file not found at: $source_fish_aliases"
+    log "[error] Source fish conf file not found at: $source_fish_config"
   fi
 
   # Ensure SSH directory exists with correct permissions
@@ -122,12 +122,12 @@ install_nvim_config() {
   if [[ -d "$source_nvim_dir" ]]; then
     # Remove existing config to ensure a clean sync (optional but recommended)
     rm -rf "$nvim_conf_dir"
-    
+
     # Copy the directory recursively
     cp -rf "$source_nvim_dir" "$HOME/.config/"
-    
+
     log "Success: Copied Neovim configuration from $source_nvim_dir"
-    
+
     # Fix permissions (standard 755 for dirs, 644 for files is typical)
     find "$nvim_conf_dir" -type d -exec chmod 755 {} +
     find "$nvim_conf_dir" -type f -exec chmod 644 {} +
@@ -149,7 +149,7 @@ set_fish_default() {
   # 1. Ensure fish is a valid shell in /etc/shells
   if ! grep -qxF "$fish_path" /etc/shells; then
     log "Adding $fish_path to /etc/shells"
-    echo "$fish_path" | sudo tee -a /etc/shells > /dev/null
+    echo "$fish_path" | sudo tee -a /etc/shells >/dev/null
   fi
 
   # 2. Check the current user's shell in /etc/passwd
@@ -164,7 +164,6 @@ set_fish_default() {
     log "Fish is already the default shell."
   fi
 }
-
 
 main() {
   if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
@@ -193,34 +192,34 @@ main() {
   # Install Core Apps
   install_apt_pkg fish
   install_apt_pkg build-essential
-  
+
   # Install Neovim (Source build ensures version >= 0.11.2)
   install_neovim_from_source
-  
+
   install_apt_pkg nodejs
   install_apt_pkg npm
   export PATH="$HOME/.local/bin:$PATH"
   # required for neovim
   sudo npm install -g tree-sitter-cli
   # 1. The Core (Compiling Parsers)
-  install_apt_pkg libstdc++6         # Critical for C++ based parsers
+  install_apt_pkg libstdc++6 # Critical for C++ based parsers
 
   # 2. Retrieval & Extraction (Downloading Parsers)
-  install_apt_pkg curl               # Fetching plugin/parser data
-  install_apt_pkg git                # Cloning plugin repos
-  install_apt_pkg unzip              # Treesitter uses this to unpack grammars
-  install_apt_pkg tar                # Alternative unpacking method
-  install_apt_pkg gzip               # Common compression utility
+  install_apt_pkg curl  # Fetching plugin/parser data
+  install_apt_pkg git   # Cloning plugin repos
+  install_apt_pkg unzip # Treesitter uses this to unpack grammars
+  install_apt_pkg tar   # Alternative unpacking method
+  install_apt_pkg gzip  # Common compression utility
 
   # 3. Neovim Build & Helper Tools (LSP/Mason Dependencies)
-  install_apt_pkg cmake              # Often needed to build specialized LSPs
-  install_apt_pkg gettext            # Required if you ever build Neovim from source
-  install_apt_pkg ninja-build        # Fast build system often used by Mason plugins
+  install_apt_pkg cmake       # Often needed to build specialized LSPs
+  install_apt_pkg gettext     # Required if you ever build Neovim from source
+  install_apt_pkg ninja-build # Fast build system often used by Mason plugins
 
   # 4. Optional but Highly Recommended for WSL
-  install_apt_pkg ripgrep            # Essential for Telescope (Searching files)
-  install_apt_pkg fd-find            # Essential for Telescope (Finding files)
-  
+  install_apt_pkg ripgrep # Essential for Telescope (Searching files)
+  install_apt_pkg fd-find # Essential for Telescope (Finding files)
+
   # Install "Oxidized" Tools
   install_eza
   install_zoxide
@@ -228,7 +227,7 @@ main() {
   # Deploy Configs
   local repo_root
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  install_aliases "$repo_root"
+  install_fish_conf "$repo_root"
   install_nvim_config "$repo_root"
 
   # set fish as default shell
@@ -239,3 +238,4 @@ main() {
 }
 
 main "$@"
+

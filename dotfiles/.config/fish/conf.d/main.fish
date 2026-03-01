@@ -1,3 +1,6 @@
+# Add Path
+fish_add_path ~/.local/bin
+
 #######################################################
 # GENERAL UTILITIES
 #######################################################
@@ -118,9 +121,9 @@ alias gpo='git push origin'
 # Alert for long running commands
 function alert
     set -l last_status $status
-    set -l icon "error"
+    set -l icon error
     if test $last_status -eq 0
-        set icon "terminal"
+        set icon terminal
     end
     notify-send --urgency=low -i $icon (history | head -n 1)
 end
@@ -135,7 +138,7 @@ end
 
 # Follow all logs
 function logs
-    sudo find /var/log -type f -exec file {} + | grep 'text' | cut -d' ' -f1 | sed -e 's/:$//g' | grep -v '[0-9]$' | xargs tail -f
+    sudo find /var/log -type f -exec file {} + | grep text | cut -d' ' -f1 | sed -e 's/:$//g' | grep -v '[0-9]$' | xargs tail -f
 end
 
 # Folder sort by size
@@ -163,3 +166,4 @@ alias ssh-start="eval (ssh-agent -c)"
 
 # Quickly edit ssh config
 alias ssh-conf="v ~/.ssh/config"
+
