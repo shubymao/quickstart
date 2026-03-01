@@ -54,8 +54,13 @@ function Ensure-Admin {
     $currentHome = $HOME 
     $targetDocs = if ([string]::IsNullOrEmpty($RepoCloneDir)) { Join-Path $currentHome "Documents\quickstart" } else { $RepoCloneDir }
 
-    # We explicitly add -SkipUserInstall to the arguments for the elevated process
-    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
+    $scriptUrl = "https://raw.githubusercontent.com/shubymao/quickstart/main/scripts/win-init.ps1"
+    $tempScript = Join-Path $env:TEMP "quickstart-win-init.ps1"
+    if (-not (Test-Path $tempScript)) {
+        Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
+    }
+
+    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $tempScript)
     if ($null -ne $InstallProfile) { $arguments += @("-InstallProfile", $InstallProfile) }
     $arguments += @("-OriginalUserPath", $currentHome)
     $arguments += @("-RepoCloneDir", $targetDocs)
