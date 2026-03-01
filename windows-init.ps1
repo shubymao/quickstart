@@ -140,7 +140,13 @@ function Invoke-WindowsInit {
     }
     
     if ([string]::IsNullOrEmpty($RepoCloneDir)) { $RepoCloneDir = Join-Path $OriginalUserPath "Documents\quickstart" }
-    if (-not (Test-Path $RepoCloneDir)) { git clone --depth 1 $RepoUrl $RepoCloneDir }
+    if (-not (Test-Path $RepoCloneDir)) { 
+        git clone --depth 1 $RepoUrl $RepoCloneDir 
+    } else {
+        Write-Step "Updating quickstart repo..."
+        Set-Location $RepoCloneDir
+        git pull
+    }
     $repoRoot = (Resolve-Path $RepoCloneDir).Path
 
     # Phase 5: Package Lists
