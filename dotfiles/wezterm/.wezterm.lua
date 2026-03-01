@@ -7,7 +7,18 @@ local config = wezterm.config_builder()
 -- This is where you actually apply your config choices
 
 -- Updated to JetBrains Mono
-config.font = wezterm.font("JetBrainsMono Nerd Font")
+config.font = wezterm.font('JetBrains Mono', {
+  weight = 'Regular', 
+  stretch = 'Normal', 
+  style = 'Normal'
+})
+
+if wezterm.target_triple:find("windows") then
+  -- This only runs if you are on Windows
+  -- Starts WSL in the home directory (~)
+  config.default_prog = { 'wsl.exe', '~' }
+end
+
 config.font_size = 18
 
 -- disable this to prevent tabs
