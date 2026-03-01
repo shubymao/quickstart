@@ -23,6 +23,50 @@ install_apt_pkg() {
   sudo apt-get install -y "$pkg"
 }
 
+install_neovim_from_source() {
+  if command -v nvim >/dev/null 2>&1; then
+    local version
+    version=$(nvim --version | head -n 1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+    # Check if version is at least 0.11.2
+    if [[ "$version" > "0.11.1" ]]; then
+      log "Neovim $version already installed (meets >= 0.11.2 requirement)."
+      return
+    fi
+  fi
+
+  log "Building Neovim from source (Stable branch)..."
+  
+  # Build dependencies
+  sudo apt-get install -y \
+    ninja-build gettext libtool libtool-bin \
+    autoconf automake cmake g++ pkg-config unzip curl
+
+  local build_dir="$HOME/neovim-build"
+  mkdir -p "$build_dir"
+  cd "$build_dir"
+
+  if [[ -d "neovim" ]]; then
+    cd neovim
+    git fetch --all
+    git checkout stable
+    git pull origin stable
+    make distclean
+  else
+    git clone https://github.com/neovim/neovim.git
+    cd neovim
+    git checkout stable
+  fi
+
+  make CMAKE_BUILD_TYPE=RelWithDebInfo
+  sudo make install
+  
+  # Clear stale Lua cache/state to prevent Snacks/Lualine errors
+  rm -rf ~/.local/share/nvim/luacache
+  rm -rf ~/.local/state/nvim/lazy
+  
+  log "Success: Neovim installed from source."
+}
+
 install_eza() {
   if command -v eza >/dev/null 2>&1; then
     log "eza already installed"
@@ -63,6 +107,33 @@ install_aliases() {
 
   # Ensure SSH directory exists with correct permissions
   mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+}
+
+install_nvim_config() {
+  local repo_root="$1"
+  # Target path for Neovim config
+  local nvim_conf_dir="$HOME/.config/nvim"
+  # Source path based on your folder structure
+  local source_nvim_dir="$repo_root/dotfiles/.config/nvim"
+
+  # Ensure the parent .config directory exists
+  mkdir -p "$HOME/.config"
+
+  if [[ -d "$source_nvim_dir" ]]; then
+    # Remove existing config to ensure a clean sync (optional but recommended)
+    rm -rf "$nvim_conf_dir"
+    
+    # Copy the directory recursively
+    cp -rf "$source_nvim_dir" "$HOME/.config/"
+    
+    log "Success: Copied Neovim configuration from $source_nvim_dir"
+    
+    # Fix permissions (standard 755 for dirs, 644 for files is typical)
+    find "$nvim_conf_dir" -type d -exec chmod 755 {} +
+    find "$nvim_conf_dir" -type f -exec chmod 644 {} +
+  else
+    log "[error] Source Neovim directory not found at: $source_nvim_dir"
+  fi
 }
 
 set_fish_default() {
@@ -121,10 +192,35 @@ main() {
 
   # Install Core Apps
   install_apt_pkg fish
-  install_apt_pkg neovim
+  install_apt_pkg build-essential
+  
+  # Install Neovim (Source build ensures version >= 0.11.2)
+  install_neovim_from_source
+  
   install_apt_pkg nodejs
   install_apt_pkg npm
+  export PATH="$HOME/.local/bin:$PATH"
+  # required for neovim
+  sudo npm install -g tree-sitter-cli
+  # 1. The Core (Compiling Parsers)
+  install_apt_pkg libstdc++6         # Critical for C++ based parsers
 
+  # 2. Retrieval & Extraction (Downloading Parsers)
+  install_apt_pkg curl               # Fetching plugin/parser data
+  install_apt_pkg git                # Cloning plugin repos
+  install_apt_pkg unzip              # Treesitter uses this to unpack grammars
+  install_apt_pkg tar                # Alternative unpacking method
+  install_apt_pkg gzip               # Common compression utility
+
+  # 3. Neovim Build & Helper Tools (LSP/Mason Dependencies)
+  install_apt_pkg cmake              # Often needed to build specialized LSPs
+  install_apt_pkg gettext            # Required if you ever build Neovim from source
+  install_apt_pkg ninja-build        # Fast build system often used by Mason plugins
+
+  # 4. Optional but Highly Recommended for WSL
+  install_apt_pkg ripgrep            # Essential for Telescope (Searching files)
+  install_apt_pkg fd-find            # Essential for Telescope (Finding files)
+  
   # Install "Oxidized" Tools
   install_eza
   install_zoxide
@@ -133,6 +229,7 @@ main() {
   local repo_root
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   install_aliases "$repo_root"
+  install_nvim_config "$repo_root"
 
   # set fish as default shell
   set_fish_default
