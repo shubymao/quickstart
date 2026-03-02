@@ -169,6 +169,7 @@ function Invoke-WindowsInit {
         "VideoLAN.VLC",
         "Tailscale.Tailscale",
         "Jellyfin.JellyfinMediaPlayer",
+        "StirlingTools.StirlingPDF",
         "TheDocumentFoundation.LibreOffice",
         "SyncTrayzor.SyncTrayzor"
     )
