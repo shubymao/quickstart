@@ -28,7 +28,7 @@ function Install-UserApps {
     }
 
     # Define User-Level apps (Always installed in User Scope)
-    $BaseUserApps = @("Nextcloud.NextcloudDesktop")
+    $BaseUserApps = @("Nextcloud.NextcloudDesktop", "HASS.Agent")
     $DevUserApps = @("wez.wezterm", "Flow-Launcher.Flow-Launcher", "AutoHotkey.AutoHotkey") 
 
     $AppsToInstall = @()
