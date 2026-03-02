@@ -1,3 +1,11 @@
+# Ansible
+keys/.vault_pass
+keys/*.enc
+!keys/*.pub
+group_vars/all/vault.yml
+*.retry
+.ansible/
+
 inventory.yml
 dotfiles/karabiner/log/
 dotfiles/karabiner/pid/

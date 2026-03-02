@@ -161,7 +161,6 @@ function Invoke-WindowsInit {
         "Brave.Brave",
         "7zip.7zip",
         "VideoLAN.VLC",
-        "PDFgear.PDFgear",
         "Tailscale.Tailscale",
         "Jellyfin.JellyfinMediaPlayer",
         "TheDocumentFoundation.LibreOffice",
@@ -177,7 +176,8 @@ function Invoke-WindowsInit {
         "Oracle.VirtualBox",
         "SoftFever.OrcaSlicer",
         "MusicBrainz.Picard",
-        "Docker.DockerDesktop"
+        "Docker.DockerDesktop",
+        "Doist.Todoist"
     )
 
     # Phase 6: Execute Profile Logic
