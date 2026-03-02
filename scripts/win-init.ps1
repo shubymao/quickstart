@@ -35,7 +35,8 @@ function Install-UserApps {
     $DevUserApps = @(
         "wez.wezterm",
         "Flow-Launcher.Flow-Launcher",
-        "AutoHotkey.AutoHotkey"
+        "AutoHotkey.AutoHotkey",
+        "Doist.Todoist"
     ) 
 
     $AppsToInstall = @()
@@ -180,8 +181,7 @@ function Invoke-WindowsInit {
         "Oracle.VirtualBox",
         "SoftFever.OrcaSlicer",
         "MusicBrainz.Picard",
-        "Docker.DockerDesktop",
-        "Doist.Todoist"
+        "Docker.DockerDesktop"
     )
 
     # Phase 6: Execute Profile Logic
