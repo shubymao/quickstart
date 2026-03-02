@@ -28,8 +28,15 @@ function Install-UserApps {
     }
 
     # Define User-Level apps (Always installed in User Scope)
-    $BaseUserApps = @("Nextcloud.NextcloudDesktop")
-    $DevUserApps = @("wez.wezterm", "Flow-Launcher.Flow-Launcher", "AutoHotkey.AutoHotkey") 
+    $BaseUserApps = @(
+        "Nextcloud.NextcloudDesktop",
+        "HASS.Agent"
+    )
+    $DevUserApps = @(
+        "wez.wezterm",
+        "Flow-Launcher.Flow-Launcher",
+        "AutoHotkey.AutoHotkey"
+    ) 
 
     $AppsToInstall = @()
     if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") { $AppsToInstall += $BaseUserApps }
@@ -162,8 +169,7 @@ function Invoke-WindowsInit {
         "Tailscale.Tailscale",
         "Jellyfin.JellyfinMediaPlayer",
         "TheDocumentFoundation.LibreOffice",
-        "SyncTrayzor.SyncTrayzor",
-        "HASS.Agent"
+        "SyncTrayzor.SyncTrayzor"
     )
     $DevApps = @(
         "Proton.ProtonVPN",
