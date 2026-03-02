@@ -56,9 +56,7 @@ function Ensure-Admin {
 
     $scriptUrl = "https://raw.githubusercontent.com/shubymao/quickstart/main/scripts/win-init.ps1?$([guid]::NewGuid().ToString())"
     $tempScript = Join-Path $env:TEMP "quickstart-win-init.ps1"
-    if (-not (Test-Path $tempScript)) {
-        Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
-    }
+    Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
 
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $tempScript)
     if ($null -ne $InstallProfile) { $arguments += @("-InstallProfile", $InstallProfile) }
