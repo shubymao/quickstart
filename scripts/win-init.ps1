@@ -28,7 +28,7 @@ function Install-UserApps {
     }
 
     # Define User-Level apps (Always installed in User Scope)
-    $BaseUserApps = @("Nextcloud.NextcloudDesktop", "HASS.Agent")
+    $BaseUserApps = @("Nextcloud.NextcloudDesktop", )
     $DevUserApps = @("wez.wezterm", "Flow-Launcher.Flow-Launcher", "AutoHotkey.AutoHotkey") 
 
     $AppsToInstall = @()
@@ -156,13 +156,27 @@ function Invoke-WindowsInit {
 
     # Phase 5: Package Lists
     $SystemApps = @(
-        "Mozilla.Firefox", "Google.Chrome", "Brave.Brave", "7zip.7zip", 
-        "VideoLAN.VLC", "GIMP.GIMP.3", "PDFgear.PDFgear", "Tailscale.Tailscale", 
-        "Jellyfin.JellyfinMediaPlayer", 
-        "TheDocumentFoundation.LibreOffice", "SyncTrayzor.SyncTrayzor", 
-        "LAB02Research.HASSAgent", "Proton.ProtonVPN", "Oracle.VirtualBox"
+        "Mozilla.Firefox",
+        "Google.Chrome",
+        "Brave.Brave",
+        "7zip.7zip",
+        "VideoLAN.VLC",
+        "PDFgear.PDFgear",
+        "Tailscale.Tailscale",
+        "Jellyfin.JellyfinMediaPlayer",
+        "TheDocumentFoundation.LibreOffice",
+        "SyncTrayzor.SyncTrayzor",
+        "HASS.Agent"
     )
-    $DevApps = @("Joplin.Joplin", "Microsoft.VisualStudioCode", "Alacritty.Alacritty")
+    $DevApps = @(
+        "Proton.ProtonVPN",
+        "Joplin.Joplin",
+        "GIMP.GIMP.3",
+        "Microsoft.VisualStudioCode",
+        "Alacritty.Alacritty",
+        "Oracle.VirtualBox",
+        "SoftFever.OrcaSlicer"
+    )
 
     # Phase 6: Execute Profile Logic
     switch ($InstallProfile) {
@@ -181,9 +195,6 @@ function Invoke-WindowsInit {
             Apply-AllSettings -RepoRoot $repoRoot
         }
     }
-
-    Write-Step "Finished. Restarting Explorer..."
-    Stop-Process -Name explorer -Force
 }
 
 try { Invoke-WindowsInit } catch { Write-Failure "Error: $($_.Exception.Message)" } finally { if (-not $NoExitPrompt) { Read-Host "`nPress Enter to exit" } }
