@@ -175,7 +175,9 @@ function Invoke-WindowsInit {
         "Microsoft.VisualStudioCode",
         "Alacritty.Alacritty",
         "Oracle.VirtualBox",
-        "SoftFever.OrcaSlicer"
+        "SoftFever.OrcaSlicer",
+        "MusicBrainz.Picard",
+        "Docker.DockerDesktop"
     )
 
     # Phase 6: Execute Profile Logic
