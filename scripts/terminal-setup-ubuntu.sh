@@ -191,13 +191,15 @@ main() {
 
   # Install Core Apps
   install_apt_pkg fish
-  install_apt_pkg build-essential
 
   # Install Neovim (Source build ensures version >= 0.11.2)
+  install_apt_pkg build-essential
   install_neovim_from_source
 
   install_apt_pkg nodejs
   install_apt_pkg npm
+  install_apt_pkg python3.12-venv
+
   export PATH="$HOME/.local/bin:$PATH"
   # required for neovim
   sudo npm install -g tree-sitter-cli
@@ -238,4 +240,3 @@ main() {
 }
 
 main "$@"
-

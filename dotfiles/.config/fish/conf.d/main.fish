@@ -13,6 +13,20 @@ alias p="ps aux | grep "
 alias f="find . | grep "
 alias checkcommand="type -a" # Fish uses -a for all types
 alias python='python3'
+alias py='python3'
+function venv
+    if not test -d .venv
+        echo "Creating .venv..."
+        python3 -m venv .venv
+    end
+
+    if test -f .venv/bin/activate.fish
+        source .venv/bin/activate.fish
+        echo "Environment activated."
+    else
+        echo "Error: .venv/bin/activate.fish not found!"
+    end
+end
 alias sha1='openssl sha1'
 
 # Modified Commands
