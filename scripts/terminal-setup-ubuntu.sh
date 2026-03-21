@@ -89,6 +89,30 @@ install_zoxide() {
   curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
 }
 
+install_opencode() {
+  echo "Starting OpenCode CLI installation..."
+
+  # Update and install dependencies
+  sudo apt update && sudo apt install -y curl
+
+  # Run the official installer
+  curl -fsSL https://opencode.ai/install | bash
+
+  # Refresh PATH in the current session
+  if [ -f "$HOME/.bashrc" ]; then
+    source "$HOME/.bashrc"
+  fi
+
+  # Verify installation
+  if command -v opencode &>/dev/null; then
+    echo "Successfully installed OpenCode CLI!"
+    opencode --version
+  else
+    echo "Error: Installation failed or 'opencode' is not in your PATH."
+    echo "Try running: source ~/.bashrc"
+  fi
+}
+
 install_fish_conf() {
   local repo_root="$1"
   # Target path for Fish auto-loading configs
@@ -137,39 +161,39 @@ install_nvim_config() {
 }
 
 check_ssh() {
-    # Define the path to the default Ed25519 key
-    local key_path="$HOME/.ssh/id_ed25519"
-    local pub_key_path="${key_path}.pub"
+  # Define the path to the default Ed25519 key
+  local key_path="$HOME/.ssh/id_ed25519"
+  local pub_key_path="${key_path}.pub"
 
-    if [ -f "$key_path" ]; then
-        echo "✅ SSH key already exists at: $key_path"
-    else
-        echo "❌ No SSH key found. Starting generation process..."
-        
-        # Prompt the user for their email
-        read -p "Enter your GitHub email address: " user_email
-        
-        # Ensure the .ssh directory exists
-        mkdir -p "$HOME/.ssh"
-        chmod 700 "$HOME/.ssh"
+  if [ -f "$key_path" ]; then
+    echo "✅ SSH key already exists at: $key_path"
+  else
+    echo "❌ No SSH key found. Starting generation process..."
 
-        # Generate the key
-        # -t ed25519: specifies the type
-        # -C: adds the email label
-        # -f: saves to the standard path
-        # -N "": sets an empty passphrase (remove this if you want to be prompted for a password)
-        ssh_keygen_cmd="ssh-keygen -t ed25519 -C \"$user_email\" -f \"$key_path\" -N \"\""
-        eval $ssh_keygen_cmd
-        
-        echo "🚀 Key generated successfully!"
-    fi
+    # Prompt the user for their email
+    read -p "Enter your GitHub email address: " user_email
 
-    # Display the public key for the user to copy
-    echo "-------------------------------------------------------"
-    echo "Copy the text below and add it to GitHub Settings:"
-    echo "-------------------------------------------------------"
-    cat "$pub_key_path"
-    echo "-------------------------------------------------------"
+    # Ensure the .ssh directory exists
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+
+    # Generate the key
+    # -t ed25519: specifies the type
+    # -C: adds the email label
+    # -f: saves to the standard path
+    # -N "": sets an empty passphrase (remove this if you want to be prompted for a password)
+    ssh_keygen_cmd="ssh-keygen -t ed25519 -C \"$user_email\" -f \"$key_path\" -N \"\""
+    eval $ssh_keygen_cmd
+
+    echo "🚀 Key generated successfully!"
+  fi
+
+  # Display the public key for the user to copy
+  echo "-------------------------------------------------------"
+  echo "Copy the text below and add it to GitHub Settings:"
+  echo "-------------------------------------------------------"
+  cat "$pub_key_path"
+  echo "-------------------------------------------------------"
 }
 
 set_fish_default() {
@@ -268,7 +292,7 @@ main() {
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   install_fish_conf "$repo_root"
   install_nvim_config "$repo_root"
-
+  install_opencode
   # set fish as default shell
   set_fish_default
 

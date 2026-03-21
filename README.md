@@ -150,7 +150,15 @@ ansible-playbook -K --ask-vault-pass -t ssh \
 
 ## First-Time Server Bootstrap
 
-Use `server-init.sh` in two phases:
+### Quick Run (One-Liner)
+
+Run directly from GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shubymao/quickstart/main/scripts/server-init.sh | sudo bash
+```
+
+### Local Run
 
 1. Bootstrap user + SSH key (keeps password auth enabled):
 
@@ -163,3 +171,12 @@ sudo ./server-init.sh
 ```bash
 sudo ./server-init.sh --harden-ssh
 ```
+
+### What It Does
+
+- Prompts for admin password (creates `admin` user if missing)
+- Installs `sudo` if missing
+- Adds admin to sudo group
+- Installs and starts SSH
+- Hardens SSH: disables root login and password auth, enables pubkey auth
+- Sets up hourly cron job syncing SSH keys from GitHub user `shubymao`
