@@ -29,8 +29,67 @@ function Install-UserApps {
 
     # Define User-Level apps (Always installed in User Scope)
     $BaseUserApps = @(
-        "Nextcloud.NextcloudDesktop",
-        "HASS.Agent"
+        "Nextcloud.NextcloudDesktop"
+    )
+
+    # Base apps installed via Chocolatey
+    $ChocolateyBaseApps = @(
+        "hass-agent",
+        "synctrayzor"
+    )
+
+    $AppsToInstall = @()
+    if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") { $AppsToInstall += $BaseUserApps }
+    if ($Profile -eq "Dev") { $AppsToInstall += $DevUserApps }
+
+    if ($AppsToInstall.Count -gt 0) {
+        Write-Step "Phase 1: Installing User-Level Applications..."
+        foreach ($AppId in $AppsToInstall) {
+            Write-Host "Installing $AppId (User Scope)..." -ForegroundColor Gray
+            winget install --exact --id $AppId --silent --accept-package-agreements --accept-source-agreements
+        }
+    }
+
+    # Install Chocolatey base apps (HASS.Agent, SyncTrayzor)
+    if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") {
+        Install-Chocolatey -Profile $Profile
+    }
+}
+
+function Install-Chocolatey {
+    param([string]$Profile)
+    
+    $chocoBaseApps = @("hass-agent", "synctrayzor")
+    
+    Write-Step "Checking Chocolatey..."
+    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+        Write-Step "Installing Chocolatey..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        refreshenv
+    }
+
+    if (Get-Command choco -ErrorAction SilentlyContinue) {
+        Write-Step "Phase 1b: Installing apps via Chocolatey..."
+        foreach ($app in $chocoBaseApps) {
+            Write-Host "Installing $app via Chocolatey..." -ForegroundColor Gray
+            choco install $app -y --no-progress 2>$null
+        }
+    } else {
+        Write-Host "Chocolatey not available, skipping HASS.Agent and SyncTrayzor" -ForegroundColor Yellow
+    }
+}
+
+    # Define User-Level apps (Always installed in User Scope)
+    $BaseUserApps = @(
+        "Nextcloud.NextcloudDesktop"
+    )
+
+    # Base apps installed via Chocolatey
+    $ChocolateyBaseApps = @(
+        "hass-agent",
+        "synctrayzor"
     )
     $DevUserApps = @(
         "wez.wezterm",
@@ -173,8 +232,7 @@ function Invoke-WindowsInit {
         "Tailscale.Tailscale",
         "Jellyfin.JellyfinMediaPlayer",
         "StirlingTools.StirlingPDF",
-        "TheDocumentFoundation.LibreOffice",
-        "SyncTrayzor.SyncTrayzor"
+        "TheDocumentFoundation.LibreOffice"
     )
     $DevApps = @(
         "Proton.ProtonVPN",
