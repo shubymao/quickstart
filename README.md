@@ -135,7 +135,7 @@ OS-specific scripts:
 Run directly from GitHub:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/shubymao/quickstart/main/scripts/server-init.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/shubymao/quickstart/main/scripts/server-init.sh -o /tmp/server-init.sh && sudo bash /tmp/server-init.sh && rm /tmp/server-init.sh
 ```
 
 ### Local Run

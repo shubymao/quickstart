@@ -16,6 +16,7 @@ CRON_JOB_FILE="/etc/cron.d/github-ssh-keys-sync"
 # 1. User and Home Directory Management
 if ! id "$USERNAME" &>/dev/null; then
   echo "--- Creating User: $USERNAME ---"
+  
   read -s -p "Enter password for $USERNAME: " USER_PASS
   echo
   read -s -p "Confirm password: " USER_PASS_CONFIRM
