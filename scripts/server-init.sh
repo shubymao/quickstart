@@ -96,7 +96,12 @@ else
   echo "Warning: SSH config test failed. Please check $CONFIG_FILE manually."
 fi
 
-# 7. Create cron job script for GitHub SSH keys sync
+# 7. Lock root account
+echo "--- Locking root account ---"
+usermod -L root
+echo "Root account locked."
+
+# 8. Create cron job script for GitHub SSH keys sync
 CRON_SCRIPT="/usr/local/bin/sync-github-ssh-keys.sh"
 
 cat >"$CRON_SCRIPT" <<'EOF'
@@ -145,7 +150,7 @@ EOF
 chmod +x "$CRON_SCRIPT"
 chown root:root "$CRON_SCRIPT"
 
-# 8. Setup cron job (runs every hour)
+# 9. Setup cron job (runs every hour)
 cat >"$CRON_JOB_FILE" <<EOF
 0 * * * * root /usr/local/bin/sync-github-ssh-keys.sh
 EOF

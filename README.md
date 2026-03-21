@@ -159,4 +159,5 @@ sudo ./server-init.sh --harden-ssh
 - Adds admin to sudo group
 - Installs and starts SSH
 - Hardens SSH: disables root login and password auth, enables pubkey auth
+- Disables root account entirely (locked + no shell)
 - Sets up hourly cron job syncing SSH keys from GitHub user `shubymao`
