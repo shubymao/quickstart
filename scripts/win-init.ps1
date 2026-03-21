@@ -81,36 +81,6 @@ function Install-Chocolatey {
     }
 }
 
-    # Define User-Level apps (Always installed in User Scope)
-    $BaseUserApps = @(
-        "Nextcloud.NextcloudDesktop"
-    )
-
-    # Base apps installed via Chocolatey
-    $ChocolateyBaseApps = @(
-        "hass-agent",
-        "synctrayzor"
-    )
-    $DevUserApps = @(
-        "wez.wezterm",
-        "Flow-Launcher.Flow-Launcher",
-        "AutoHotkey.AutoHotkey",
-        "Doist.Todoist"
-    ) 
-
-    $AppsToInstall = @()
-    if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") { $AppsToInstall += $BaseUserApps }
-    if ($Profile -eq "Dev") { $AppsToInstall += $DevUserApps }
-
-    if ($AppsToInstall.Count -gt 0) {
-        Write-Step "Phase 1: Installing User-Level Applications..."
-        foreach ($AppId in $AppsToInstall) {
-            Write-Host "Installing $AppId (User Scope)..." -ForegroundColor Gray
-            winget install --exact --id $AppId --silent --accept-package-agreements --accept-source-agreements
-        }
-    }
-}
-
 # --- 2. Admin Elevation (The Handshake) ---
 function Ensure-Admin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
