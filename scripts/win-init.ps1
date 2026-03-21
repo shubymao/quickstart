@@ -38,6 +38,13 @@ function Install-UserApps {
         "synctrayzor"
     )
 
+    $DevUserApps = @(
+        "wez.wezterm",
+        "Flow-Launcher.Flow-Launcher",
+        "AutoHotkey.AutoHotkey",
+        "Doist.Todoist"
+    )
+
     $AppsToInstall = @()
     if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") { $AppsToInstall += $BaseUserApps }
     if ($Profile -eq "Dev") { $AppsToInstall += $DevUserApps }
