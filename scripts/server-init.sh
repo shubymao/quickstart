@@ -42,11 +42,12 @@ fi
 
 echo "Setting ownership of $HOME_DIR to $USERNAME..."
 chown -R "$USERNAME":"$USERNAME" "$HOME_DIR"
+chmod 755 "$HOME_DIR"
 
-# 2. Install sudo if not exist
-if ! command -v sudo &>/dev/null; then
-  echo "--- Installing sudo ---"
-  apt update && apt install -y sudo
+# 2. Install sudo and dependencies if not exist
+if ! command -v sudo &>/dev/null || ! command -v curl &>/dev/null || ! command -v python3 &>/dev/null; then
+  echo "--- Installing dependencies ---"
+  apt update && apt install -y sudo curl python3
 fi
 
 # 3. Add admin to sudo group
@@ -78,9 +79,8 @@ CONFIG_FILE="/etc/ssh/sshd_config"
 set_ssh_config() {
   local key=$1
   local value=$2
-  if grep -qE "^#?\s*${key}" "$CONFIG_FILE"; then
-    sed -i -E "s|^#?\s*${key}.*|${key} ${value}|" "$CONFIG_FILE"
-  else
+  sed -i -E "s|^#?\s*${key}.*|${key} ${value}|" "$CONFIG_FILE"
+  if ! grep -qE "^${key}\s" "$CONFIG_FILE"; then
     echo "${key} ${value}" >>"$CONFIG_FILE"
   fi
 }
@@ -107,25 +107,32 @@ HOME_DIR="/home/$USERNAME"
 AUTH_KEYS="$HOME_DIR/.ssh/authorized_keys"
 TMP_FILE="/tmp/github_keys_$$.tmp"
 
+is_valid_pubkey() {
+    [[ "$1" =~ ^ssh-(ed25519|rsa|ecdsa-[^[:space:]]+)[[:space:]][A-Za-z0-9+/=]+[[:space:]]*.*$ ]]
+}
+
 fetch_github_keys() {
-    curl -s "https://api.github.com/users/${GITHUB_USER}/keys" > "$TMP_FILE"
-    
-    if [ $? -ne 0 ]; then
+    curl -sf "https://api.github.com/users/${GITHUB_USER}/keys" -o "$TMP_FILE" || {
         echo "Failed to fetch keys from GitHub API"
         rm -f "$TMP_FILE"
         exit 1
-    fi
+    }
 
-    while IFS= read -r line; do
-        if echo "$line" | grep -q '"key"'; then
-            key=$(echo "$line" | sed -E 's/.*"key"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' | sed 's/\\n/\n/g')
-            if [ -n "$key" ]; then
-                if ! grep -qF "$key" "$AUTH_KEYS" 2>/dev/null; then
-                    echo "$key" >> "$AUTH_KEYS"
-                fi
+    while IFS= read -r key; do
+        if is_valid_pubkey "$key"; then
+            if ! grep -qF -- "$key" "$AUTH_KEYS" 2>/dev/null; then
+                echo "$key" >> "$AUTH_KEYS"
             fi
         fi
-    done < "$TMP_FILE"
+    done < <(python3 -c "
+import json, sys
+try:
+    keys = json.load(open('$TMP_FILE'))
+    for k in keys:
+        print(k.get('key', ''))
+except:
+    pass
+" 2>/dev/null)
 
     rm -f "$TMP_FILE"
     chown "$USERNAME:$USERNAME" "$AUTH_KEYS"
