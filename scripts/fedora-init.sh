@@ -115,28 +115,21 @@ install_nerd_fonts() {
 }
 
 install_wallpapers() {
-  local repo_root="$1"
-  local source_dir="$repo_root/wallpapers"
-  if [[ ! -d "$source_dir" ]]; then
-    echo "[quickstart][error] Wallpaper source directory not found: $source_dir" >&2
-    exit 1
+  local target_dir="$HOME/Pictures/quickstart-wallpapers"
+  if [[ -d "$target_dir" ]] && [[ -n "$(ls -A "$target_dir" 2>/dev/null)" ]]; then
+    log "Wallpapers already installed at $target_dir"
+    find "$target_dir" -maxdepth 1 -type f | sort | head -n 1
+    return
   fi
 
-  local target_dir="$HOME/Pictures/quickstart-wallpapers"
+  rm -rf "$target_dir"
   mkdir -p "$target_dir"
-  local files=()
-  while IFS= read -r f; do
-    files+=("$f")
-  done < <(find "$source_dir" -maxdepth 1 -type f | sort)
-  if [[ "${#files[@]}" -eq 0 ]]; then
-    echo "[quickstart][error] No wallpaper files found in $source_dir" >&2
+  if ! git clone --quiet https://github.com/shubymao/wallpaper.git "$target_dir"; then
+    echo "[quickstart][error] Failed to clone wallpaper repo" >&2
+    rm -rf "$target_dir"
     exit 1
   fi
-  local file
-  for file in "${files[@]}"; do
-    cp -f "$file" "$target_dir"/
-  done
-  log "Copied wallpapers to $target_dir"
+  log "Cloned wallpapers to $target_dir"
 
   local first_image
   first_image="$(find "$target_dir" -maxdepth 1 -type f | sort | head -n 1 || true)"

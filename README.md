@@ -60,7 +60,7 @@ What this installs/configures:
 - Dev: WezTerm, Alacritty, VS Code, WSL (default version 2 + Ubuntu distro), Joplin, AutoHotkey v2
 - WezTerm config from `dotfiles/wezterm/.wezterm.lua` to `%USERPROFILE%\.wezterm.lua` (Dev profile)
 - Startup shortcut for `dotfiles/main.ahk` (Dev profile)
-- Copies `wallpapers/*` to `%USERPROFILE%\Pictures\quickstart-wallpapers`
+- Clones wallpapers from `https://github.com/shubymao/wallpaper.git` to `%USERPROFILE%\Pictures\quickstart-wallpapers`
 - Sets desktop wallpaper to slideshow from that folder
 - Tries to set lock screen image to the first wallpaper file
 - Sets Windows apps/system theme to dark
@@ -93,7 +93,7 @@ What this installs/configures:
 - Dev apps: WezTerm, Alacritty, keyd (for key remapping)
 - Dev Flatpak apps: VS Code, Joplin, Proton VPN, VirtualBox (when available on Flathub)
 - WezTerm config from `dotfiles/wezterm/.wezterm.lua` to `~/.wezterm.lua` (Dev profile)
-- Copies `wallpapers/*` to `~/Pictures/quickstart-wallpapers`
+- Clones wallpapers from `https://github.com/shubymao/wallpaper.git` to `~/Pictures/quickstart-wallpapers`
 - Sets GNOME wallpaper to the first copied image
 - Adds app launchers to GNOME favorites (taskbar/dock)
 - Sets GNOME custom hotkeys (Dev profile):

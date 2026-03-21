@@ -181,18 +181,22 @@ configure_karabiner() {
 }
 
 install_wallpapers() {
-  local repo_root="$1"
-  local source_dir="$repo_root/wallpapers"
   local target_dir="$HOME/Pictures/quickstart-wallpapers"
 
-  if [[ ! -d "$source_dir" ]]; then
-    warn_step "Wallpaper source directory not found: $source_dir"
-    return 1
+  if [[ -d "$target_dir" ]] && [[ -n "$(ls -A "$target_dir" 2>/dev/null)" ]]; then
+    write_step "Wallpapers already installed at $target_dir"
+    find "$target_dir" -type f | head -n 1
+    return 0
   fi
 
+  rm -rf "$target_dir"
   mkdir -p "$target_dir"
-  cp -f "$source_dir"/* "$target_dir"/
-  write_step "Copied wallpapers to $target_dir"
+  if ! git clone --quiet https://github.com/shubymao/wallpaper.git "$target_dir"; then
+    warn_step "Failed to clone wallpaper repo"
+    rm -rf "$target_dir"
+    return 1
+  fi
+  write_step "Cloned wallpapers to $target_dir"
 
   local first_image
   first_image="$(find "$target_dir" -type f | head -n 1 || true)"
@@ -352,7 +356,7 @@ main() {
   fi
 
   local first_wallpaper
-  if first_wallpaper="$(install_wallpapers "$repo_root")"; then
+  if first_wallpaper="$(install_wallpapers)"; then
     set_desktop_picture "$first_wallpaper"
   fi
 

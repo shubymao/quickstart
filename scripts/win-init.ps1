@@ -101,11 +101,14 @@ function Apply-AllSettings {
     if (-not (Test-Path "HKCU:\Software\Microsoft\TabletTip\1.7")) { New-Item -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Force }
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\TabletTip\1.7" -Name "UserKeyboardScalingFactor" -Value 180 -Force
 
-    $sourceDir = Join-Path $RepoRoot "wallpapers"
-    if (Test-Path $sourceDir) {
-        $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
-        if (-not (Test-Path $targetDir)) { New-Item -Path $targetDir -ItemType Directory -Force | Out-Null }
-        Get-ChildItem -Path $sourceDir -File | ForEach-Object { Copy-Item -Path $_.FullName -Destination (Join-Path $targetDir $_.Name) -Force }
+    $targetDir = Join-Path $OriginalUserPath "Pictures\quickstart-wallpapers"
+    if ((Test-Path $targetDir) -and (Get-ChildItem -Path $targetDir -File -ErrorAction SilentlyContinue | Measure-Object).Count -gt 0) {
+        Write-Step "Wallpapers already installed at $targetDir"
+    } else {
+        Remove-Item -Path $targetDir -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
+        git clone --quiet https://github.com/shubymao/wallpaper.git $targetDir 2>$null
+        Write-Step "Cloned wallpapers to $targetDir"
     }
 }
 

@@ -18,3 +18,9 @@ keymap.set("n", "<M-h>", "2<C-w><", { desc = "Resize window left" })
 keymap.set("n", "<M-l>", "1<C-w>>", { desc = "Resize window right" })
 keymap.set("n", "<M-j>", "3<C-w>-", { desc = "Resize window down" })
 keymap.set("n", "<M-k>", "2<C-w>+", { desc = "Resize window up" })
+
+-- git fugitive keymaps
+keymap.set("n", "<leader>gs", ":Git<cr>", { desc = "Git status" })
+keymap.set("n", "<leader>gd", ":Gvdiffsplit<cr>", { desc = "Git diff split" })
+keymap.set("n", "<leader>gc", ":Git commit<cr>", { desc = "Git commit" })
+keymap.set("n", "<leader>gp", ":Git push<cr>", { desc = "Git push" })
