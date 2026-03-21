@@ -128,26 +128,6 @@ OS-specific scripts:
 - `scripts/terminal-setup-fedora.sh`
 - `scripts/terminal-setup-macos.sh`
 
-## SSH Setup (Personal Multi-Server Flow)
-
-This repo now installs only public keys. It does not copy a private key to target machines.
-
-### Option A: use the repo key file
-
-Put your public key in `keys/id_ed25519.pub` (vault-encrypted is fine), then run:
-
-```bash
-ansible-playbook -K --ask-vault-pass -t ssh universal.yml
-```
-
-### Option B: override key at runtime (recommended for quick bootstrap)
-
-```bash
-ansible-playbook -K --ask-vault-pass -t ssh \
-  -e "bootstrap_pubkey=$(cat ~/.ssh/id_ed25519.pub)" \
-  universal.yml
-```
-
 ## First-Time Server Bootstrap
 
 ### Quick Run (One-Liner)
