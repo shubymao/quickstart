@@ -57,10 +57,6 @@ function Install-UserApps {
         }
     }
 
-    # Install Chocolatey base apps (HASS.Agent, SyncTrayzor)
-    if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") {
-        Install-Chocolatey -Profile $Profile
-    }
 }
 
 function Install-Chocolatey {
@@ -229,12 +225,14 @@ function Invoke-WindowsInit {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $SystemApps) { Install-WingetPackage -Id $app }
             foreach ($app in $DevApps) { Install-WingetPackage -Id $app }
+            Install-Chocolatey -Profile $InstallProfile
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
         }
         "BaseOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
             foreach ($app in $SystemApps) { Install-WingetPackage -Id $app }
+            Install-Chocolatey -Profile $InstallProfile
         }
         "SettingsOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
