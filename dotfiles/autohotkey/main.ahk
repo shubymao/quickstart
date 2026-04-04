@@ -40,12 +40,8 @@ GetVSCodePath() {
 }
 
 ; --- 5b. ALT SPECIFIC MAPPINGS ---
-; Alt+Q sends Alt+F4 (close window)
-; Since Alt is remapped to Hyper, this triggers ^!+#q
-!q:: Send("!{F4}")
 
 ; --- 6. HYPER KEY SHORTCUTS (^!+# = Ctrl+Shift+Alt+Win) ---
-^!+#q:: Send("!{F4}")
 
 ^!+#w::{
     ahkPath := A_AppData . "\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk"
