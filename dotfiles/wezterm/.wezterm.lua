@@ -29,7 +29,21 @@ config.window_decorations = "TITLE | RESIZE"
 config.window_background_opacity = 0.8
 config.macos_window_background_blur = 10
 config.window_close_confirmation = "NeverPrompt"
+config.skip_close_confirmation_for_processes_named = {
+  'bash',
+  'sh',
+  'zsh',
+  'fish',
+  'tmux',
+  'nu',
+  'cmd.exe',
+  'pwsh.exe',
+  'powershell.exe',
+  'wsl.exe',
+  'wslhost.exe',
+}
 config.confirm_tab_close = false
+config.confirm_close_pane = false
 config.window_padding = {
     left = 0,
     right = 0,
