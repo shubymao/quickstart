@@ -169,9 +169,9 @@ function Register-DevConfigs {
 function Invoke-WindowsInit {
     # Phase 1: Interactive Choice
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full Setup)`n4) Gaming" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full Setup)`n4) Gaming`n5) DevConfigOnly" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
-        $script:InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; "4"{"Gaming"}; Default{"SettingsOnly"} }
+        $script:InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; "4"{"Gaming"}; "5"{"DevConfigOnly"}; Default{"SettingsOnly"} }
     }
 
     # Phase 2: User-Level Installs (Will skip if -SkipUserInstall is passed)
@@ -249,6 +249,18 @@ function Invoke-WindowsInit {
         }
         "SettingsOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
+        }
+        "DevConfigOnly" {
+            if ([string]::IsNullOrEmpty($RepoCloneDir)) { $RepoCloneDir = Join-Path $OriginalUserPath "Documents\quickstart" }
+            if (Test-Path $RepoCloneDir) {
+                Set-Location $RepoCloneDir
+                git pull
+                $repoRoot = (Resolve-Path $RepoCloneDir).Path
+                Register-DevConfigs -RepoRoot $repoRoot
+                Write-Step "Dev config files synced and updated."
+            } else {
+                Write-Host "Quickstart repo not found at $RepoCloneDir" -ForegroundColor Yellow
+            }
         }
     }
 }
