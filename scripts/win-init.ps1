@@ -169,9 +169,9 @@ function Register-DevConfigs {
 function Invoke-WindowsInit {
     # Phase 1: Interactive Choice
     if (-not $InstallProfile) {
-        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full Setup)" -ForegroundColor Yellow
+        Write-Host "`nSelect Profile:`n1) SettingsOnly`n2) BaseOnly`n3) Dev (Full Setup)`n4) Gaming" -ForegroundColor Yellow
         $choice = Read-Host "Choice"
-        $script:InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; Default{"SettingsOnly"} }
+        $script:InstallProfile = switch($choice) { "1"{"SettingsOnly"}; "2"{"BaseOnly"}; "3"{"Dev"}; "4"{"Gaming"}; Default{"SettingsOnly"} }
     }
 
     # Phase 2: User-Level Installs (Will skip if -SkipUserInstall is passed)
@@ -219,6 +219,12 @@ function Invoke-WindowsInit {
         "Docker.DockerDesktop"
     )
 
+    $GamingApps = @(
+        "Valve.Steam",
+        "EpicGames.EpicGamesLauncher",
+        "Ryochan7.DS4Windows"
+    )
+
     # Phase 6: Execute Profile Logic
     switch ($InstallProfile) {
         "Dev" {
@@ -228,6 +234,12 @@ function Invoke-WindowsInit {
             Install-Chocolatey -Profile $InstallProfile
             Register-DevConfigs -RepoRoot $repoRoot
             wsl --install --no-distribution 2>$null
+        }
+        "Gaming" {
+            Apply-AllSettings -RepoRoot $repoRoot
+            foreach ($app in $SystemApps) { Install-WingetPackage -Id $app }
+            foreach ($app in $GamingApps) { Install-WingetPackage -Id $app }
+            Install-Chocolatey -Profile $InstallProfile
         }
         "BaseOnly" {
             Apply-AllSettings -RepoRoot $repoRoot
