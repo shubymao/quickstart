@@ -28,22 +28,27 @@ GetVSCodePath() {
     return
 }
 
-; --- 5. HYPER KEY SHORTCUTS (^!+# = Ctrl+Shift+Alt+Win) ---
-^!+#q:: Send("!{F4}")
+; --- 5. ALT TO HYPER REMAPPING ---
+*LAlt::
+{
+    Send "{Ctrl down}{Shift down}{Alt down}{LWin down}"
+}
+
+*LAlt up::
+{
+    Send "{Ctrl up}{Shift up}{Alt up}{LWin up}"
+}
+
+; --- 6. HYPER KEY SHORTCUTS (^!+# = Ctrl+Shift+Alt+Win) ---
+^!+#q:: Send("{F4}")
 
 ^!+#w::{
     ahkPath := A_AppData . "\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk"
     codePath := GetVSCodePath()
     Run(codePath . ' "' . ahkPath . '"')
 }
-!w::{
-    ahkPath := A_AppData . "\Microsoft\Windows\Start Menu\Programs\Startup\main.ahk"
-    codePath := GetVSCodePath()
-    Run(codePath . ' "' . ahkPath . '"')
-}
 
 ^!+#r:: Reload()
-!r:: Reload()
 
 ; Disable stupid windows copilot re routing 
 +!^LWin::
