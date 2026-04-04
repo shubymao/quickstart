@@ -90,7 +90,7 @@ GetVSCodePath() {
 
 ; Shortcuts
 
-^!+#Space:: Send("!{Space}") ; flow launcher
+^!+#Space:: Send("!{Space}") ; raycast
 
 ^!+#q:: Send("!{F4}")    ; Alt + F4
 ; edit this Script in VS Code
@@ -105,7 +105,7 @@ GetVSCodePath() {
 
 
 
-^!+#a:: runFocusOrStart("C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe", "brave.exe")
+^!+#a:: runFocusOrStart("C:\Program Files\Mozilla Firefox\firefox.exe", "firefox.exe")
 ^!+#s:: {
     codePath := GetVSCodePath()
     runFocusOrStart(codePath, "Code.exe")
