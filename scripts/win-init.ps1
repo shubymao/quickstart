@@ -204,7 +204,7 @@ function Invoke-WindowsInit {
         "VideoLAN.VLC",
         "Tailscale.Tailscale",
         "Jellyfin.JellyfinMediaPlayer",
-        "StirlingTools.StirlingPDF",
+        "Adobe.Acrobat.Reader.64-bit",
         "TheDocumentFoundation.LibreOffice"
     )
     $DevApps = @(
