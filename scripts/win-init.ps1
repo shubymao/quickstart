@@ -46,7 +46,7 @@ function Install-UserApps {
     )
 
     $AppsToInstall = @()
-    if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly") { $AppsToInstall += $BaseUserApps }
+    if ($Profile -eq "Dev" -or $Profile -eq "BaseOnly" -or $Profile -eq "Gaming") { $AppsToInstall += $BaseUserApps }
     if ($Profile -eq "Dev") { $AppsToInstall += $DevUserApps }
 
     if ($AppsToInstall.Count -gt 0) {
@@ -183,6 +183,7 @@ function Invoke-WindowsInit {
     # Phase 4: Git & Repo Setup
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
         Install-WingetPackage -Id "Git.Git"
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","User") + ";" + [System.Environment]::GetEnvironmentVariable("Path","Machine")
     }
     
     if ([string]::IsNullOrEmpty($RepoCloneDir)) { $RepoCloneDir = Join-Path $OriginalUserPath "Documents\quickstart" }
