@@ -40,7 +40,7 @@ function Install-UserApps {
 
     $DevUserApps = @(
         "wez.wezterm",
-        "Flow-Launcher.Flow-Launcher",
+        "Raycast.Raycast",
         "AutoHotkey.AutoHotkey",
         "Doist.Todoist"
     )
@@ -151,11 +151,11 @@ function Register-DevConfigs {
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
     if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
 
-    $flowSource = Join-Path $RepoRoot "dotfiles\flowlauncher\Settings.json"
-    $flowDestDir = Join-Path $OriginalUserPath "AppData\Roaming\FlowLauncher\Settings"
-    if (Test-Path $flowSource) {
-        if (-not (Test-Path $flowDestDir)) { New-Item -Path $flowDestDir -ItemType Directory -Force | Out-Null }
-        Copy-Item -Path $flowSource -Destination (Join-Path $flowDestDir "Settings.json") -Force
+    $raycastSource = Join-Path $RepoRoot "dotfiles\raycast\settings.json"
+    $raycastDestDir = Join-Path $OriginalUserPath "AppData\Roaming\Raycast\Settings"
+    if (Test-Path $raycastSource) {
+        if (-not (Test-Path $raycastDestDir)) { New-Item -Path $raycastDestDir -ItemType Directory -Force | Out-Null }
+        Copy-Item -Path $raycastSource -Destination (Join-Path $raycastDestDir "settings.json") -Force
     }
 
     $ahkSource = Join-Path $RepoRoot "dotfiles\autohotkey\main.ahk"
