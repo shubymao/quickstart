@@ -73,6 +73,29 @@ Optional distro override:
 .\universal.ps1 -WslDistro "Ubuntu-24.04"
 ```
 
+## Raycast Windows
+
+Backup and restore Raycast settings using the built-in export/import commands.
+
+### Backup
+
+1. Open Raycast (`Alt + Space`)
+2. Run **Export Settings & Data**
+3. Set a passphrase (stored in Settings → Raycast)
+4. Saves as `.rayconfig` file
+
+### Restore
+
+1. Copy `.rayconfig` to Downloads folder
+2. Run **Import Settings & Data**
+3. Select the file and enter passphrase
+
+The export includes: quicklinks, snippets, settings, extensions, hotkeys, and aliases.
+
+### Config Location
+
+Raycast Windows doesn't store config in a manual location. Use the export/import commands above. The backed-up config is stored in `dotfiles/raycast/raycast.rayconfig`.
+
 ## Fedora Desktop Quick Setup
 
 Run from your normal user (the script uses `sudo` for package installs):
