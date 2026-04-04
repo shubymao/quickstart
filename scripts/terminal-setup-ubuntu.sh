@@ -175,6 +175,16 @@ install_tmux_conf() {
   fi
 }
 
+install_tpm() {
+  local tpm_dir="$HOME/.tmux/plugins/tpm"
+  if [[ -d "$tpm_dir" ]]; then
+    log "tpm already installed"
+    return
+  fi
+  log "Installing tmux plugin manager (tpm)..."
+  git clone https://github.com/tmux-plugins/tpm "$tpm_dir"
+}
+
 install_tmux_sessionizer() {
   local repo_root="$1"
   local source_script="$repo_root/scripts/tmux_sessionizer"
@@ -323,12 +333,14 @@ main() {
   install_nvim_config "$repo_root"
   install_tmux_conf "$repo_root"
   install_tmux_sessionizer "$repo_root"
+  install_tpm
   install_opencode
   # set fish as default shell
   set_fish_default
 
   log "Ubuntu terminal bootstrap completed."
   log "Please run 'fish' to enter your new shell."
+  log "After starting tmux, press 'prefix + I' to install tmux plugins."
 }
 
 main "$@"
