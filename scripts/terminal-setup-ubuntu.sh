@@ -160,6 +160,34 @@ install_nvim_config() {
   fi
 }
 
+install_tmux_conf() {
+  local repo_root="$1"
+  local source_tmux="$repo_root/dotfiles/tmux/.tmux.conf"
+  local target_tmux="$HOME/.tmux.conf"
+
+  if [[ -f "$source_tmux" ]]; then
+    if [[ ! -f "$target_tmux" ]] || ! cmp -s "$source_tmux" "$target_tmux"; then
+      cp -f "$source_tmux" "$target_tmux"
+      log "Installed tmux config to $target_tmux"
+    else
+      log "Tmux config already up to date: $target_tmux"
+    fi
+  fi
+}
+
+install_tmux_sessionizer() {
+  local repo_root="$1"
+  local source_script="$repo_root/scripts/tmux_sessionizer"
+  local target_script="$HOME/.local/bin/tmux_sessionizer"
+
+  mkdir -p "$HOME/.local/bin"
+  if [[ -f "$source_script" ]]; then
+    cp -f "$source_script" "$target_script"
+    chmod +x "$target_script"
+    log "Installed tmux sessionizer to $target_script"
+  fi
+}
+
 check_ssh() {
   # Define the path to the default Ed25519 key
   local key_path="$HOME/.ssh/id_ed25519"
@@ -252,6 +280,7 @@ main() {
   check_ssh
   # Install Core Apps
   install_apt_pkg fish
+  install_apt_pkg fzf
 
   # Install Neovim (Source build ensures version >= 0.11.2)
   install_apt_pkg build-essential
@@ -292,6 +321,8 @@ main() {
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   install_fish_conf "$repo_root"
   install_nvim_config "$repo_root"
+  install_tmux_conf "$repo_root"
+  install_tmux_sessionizer "$repo_root"
   install_opencode
   # set fish as default shell
   set_fish_default

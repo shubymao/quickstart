@@ -140,11 +140,14 @@ What it sets up:
   - Ubuntu: `apt`
   - Fedora: `dnf`
   - macOS: installs Homebrew if missing, then uses `brew`
-- Installs: `fish`, `neovim`, `vim` (backup), `node/npm`, and OpenAI Codex (`@openai/codex`)
+- Installs: `fish`, `neovim`, `vim` (backup), `node/npm`, and OpenAI Codex (`@openai/codex`) and `fzf`
 - Installs aliases:
   - Copies `dotfiles/.aliases` to `~/.aliases`
   - Ensures `~/.bashrc` and `~/.zshrc` source `~/.aliases`
   - Creates fish aliases at `~/.config/fish/conf.d/quickstart_aliases.fish`
+  - Copies `dotfiles/tmux/.tmux.conf` to `~/.tmux.conf`
+  - Installs `tmux_sessionizer` script to `~/.local/bin/tmux_sessionizer`
+  - Fish binds `Ctrl+f` to launch the tmux sessionizer
 
 OS-specific scripts:
 - `scripts/terminal-setup-ubuntu.sh`

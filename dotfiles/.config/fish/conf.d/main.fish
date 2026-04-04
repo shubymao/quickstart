@@ -183,3 +183,11 @@ alias ssh-start="eval (ssh-agent -c)"
 
 # Quickly edit ssh config
 alias ssh-conf="v ~/.ssh/config"
+
+#######################################################
+# TMUX SESSIONIZER
+#######################################################
+function tmux_sessionizer
+    ~/projects/quickstart/scripts/tmux_sessionizer $argv
+end
+bind \cf tmux_sessionizer
