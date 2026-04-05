@@ -23,21 +23,11 @@ GetVSCodePath() {
     return "Code.exe"
 }
 
-; --- 4. COPILOT / OFFICE KEY KILLER ---
-#<^<+<!vk07:: {
-    return
-}
+; --- 4. COPILOT KEY TO HYPER ---
+vk07::#^+!
 
-; --- 5. ALT TO HYPER REMAPPING ---
-*LAlt::
-{
-    Send "{Ctrl down}{Shift down}{Alt down}{LWin down}"
-}
-
-*LAlt up::
-{
-    Send "{Ctrl up}{Shift up}{Alt up}{LWin up}"
-}
+; --- 5a. RIGHT ALT TO HYPER (native remap, no loop risk) ---
+>!::#^+!
 
 ; --- 5b. ALT SPECIFIC MAPPINGS ---
 
