@@ -5,7 +5,7 @@ param(
     [string]$InstallProfile,
     [switch]$NoExitPrompt,
     [switch]$SkipUserInstall,
-    [string]$OriginalUserPath = $HOME
+    [string]$OriginalUserPath = $env:USERPROFILE
 )
 
 Set-StrictMode -Version Latest
@@ -154,7 +154,13 @@ function Register-DevConfigs {
     Write-Step "Syncing Dotfiles..."
     
     $wezSource = Join-Path $RepoRoot "dotfiles\wezterm\.wezterm.lua"
-    if (Test-Path $wezSource) { Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force }
+    if (Test-Path $wezSource) {
+        try {
+            Copy-Item -Path $wezSource -Destination (Join-Path $OriginalUserPath ".wezterm.lua") -Force -ErrorAction Stop
+        } catch {
+            Write-Failure "Failed to copy .wezterm.lua: $_"
+        }
+    }
 
     $raycastSource = Join-Path $RepoRoot "dotfiles\raycast\settings.json"
     $raycastDestDir = Join-Path $OriginalUserPath "AppData\Roaming\Raycast\Settings"
