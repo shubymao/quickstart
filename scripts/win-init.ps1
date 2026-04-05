@@ -65,13 +65,18 @@ function Install-Chocolatey {
     $chocoBaseApps = @("hass-agent", "synctrayzor")
     
     Write-Step "Checking Chocolatey..."
-    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+    if ($env:ChocolateyInstall -and (Test-Path $env:ChocolateyInstall)) {
+        Write-Step "Chocolatey already detected at $env:ChocolateyInstall, skipping install."
+    } else {
         Write-Step "Installing Chocolatey..."
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
         Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        refreshenv
+        # Attempt to refresh Chocolatey environment
+        try { & "$env:ChocolateyInstall\\bin\\refreshenv.ps1" } catch { if ($env:ChocolateyInstall) { $env:Path += ";$env:ChocolateyInstall\\bin" } }
     }
+}
 
     if (Get-Command choco -ErrorAction SilentlyContinue) {
         Write-Step "Phase 1b: Installing apps via Chocolatey..."
