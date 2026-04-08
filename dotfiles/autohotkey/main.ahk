@@ -25,7 +25,7 @@ GetVSCodePath() {
 
 ; --- 4. COPILOT KEY TO HYPER ---
 vk07::#^+!
-
+#+F23::#^+!
 ; --- 5a. RIGHT ALT TO HYPER (native remap, no loop risk) ---
 >!::#^+!
 
