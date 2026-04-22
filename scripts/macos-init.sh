@@ -164,19 +164,28 @@ configure_karabiner() {
   local target_dir="$HOME/.config/karabiner"
   local target_assets="$target_dir/assets"
 
+  write_step "Source: $source_cfg -> Target: $target_dir/karabiner.json"
+
   mkdir -p "$target_dir"
   if [[ -f "$source_cfg" ]]; then
-    cp -f "$source_cfg" "$target_dir/karabiner.json"
-    write_step "Installed Karabiner config to $target_dir/karabiner.json"
+    if cp -f "$source_cfg" "$target_dir/karabiner.json"; then
+      write_step "Installed Karabiner config to $target_dir/karabiner.json"
+    else
+      warn_step "Failed to copy Karabiner config"
+    fi
   else
     warn_step "Karabiner config not found: $source_cfg"
   fi
 
   if [[ -d "$source_assets" ]]; then
+    write_step "Source: $source_assets/complex_modifications -> Target: $target_assets"
     mkdir -p "$target_assets"
     rm -rf "$target_assets/complex_modifications"
-    cp -R "$source_assets/complex_modifications" "$target_assets/"
-    write_step "Installed Karabiner assets to $target_assets"
+    if cp -R "$source_assets/complex_modifications" "$target_assets/"; then
+      write_step "Installed Karabiner assets to $target_assets"
+    else
+      warn_step "Failed to copy Karabiner assets"
+    fi
   fi
 }
 
@@ -269,8 +278,9 @@ configure_dock_apps() {
     "/System/Library/CoreServices/Finder.app"
   add_to_dock_if_present "Terminal" \
     "/System/Applications/Utilities/Terminal.app"
+
   add_to_dock_if_present "WezTerm" \
-    "/Applications/WezTerm.app"
+    "/Applications/WezTerm.app" || true
   add_to_dock_if_present "Alacritty" \
     "/Applications/Alacritty.app"
   add_to_dock_if_present "Screenshot" \
@@ -295,11 +305,16 @@ install_fish_conf() {
   local fish_conf_dir="$HOME/.config/fish/conf.d"
   local source_fish_config="$repo_root/dotfiles/.config/fish/conf.d/main.fish"
 
+  write_step "Source: $source_fish_config -> Target: $fish_conf_dir/main.fish"
+
   mkdir -p "$fish_conf_dir"
 
   if [[ -f "$source_fish_config" ]]; then
-    cp -f "$source_fish_config" "$fish_conf_dir/main.fish"
-    write_step "Installed Fish conf to $fish_conf_dir/main.fish"
+    if cp -f "$source_fish_config" "$fish_conf_dir/main.fish"; then
+      write_step "Installed Fish conf to $fish_conf_dir/main.fish"
+    else
+      warn_step "Failed to copy Fish conf"
+    fi
   else
     warn_step "Fish conf not found: $source_fish_config"
   fi
@@ -465,7 +480,7 @@ main() {
   require_macos
 
   local repo_root
-  repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
   ensure_brew
   ensure_brew_path_now
@@ -517,31 +532,16 @@ main() {
   for entry in "${base_apps[@]}"; do
     install_app_entry "$entry"
   done
-  if [[ "$is_dev_profile" == "true" ]]; then
-    for entry in "${dev_apps[@]}"; do
+  for entry in "${dev_apps[@]}"; do
       install_app_entry "$entry"
-    done
-  fi
-
-  install_nerd_fonts
-
-  if [[ "$is_dev_profile" == "true" ]]; then
-    install_terminal_tools "$repo_root"
-    install_wezterm_config "$repo_root"
-    configure_karabiner "$repo_root"
-  fi
-
-  if [[ "$is_dev_profile" == "true" ]]; then
-    install_wezterm_config "$repo_root"
-    configure_karabiner "$repo_root"
-  fi
-
-  local first_wallpaper
-  if first_wallpaper="$(install_wallpapers)"; then
-    set_desktop_picture "$first_wallpaper"
-  fi
+  done
+  install_terminal_tools "$repo_root"
 
   set_macos_dark_theme
+
+  install_wezterm_config "$repo_root"
+  configure_karabiner "$repo_root"
+
   configure_dock_apps
 
   write_step "macOS desktop bootstrap completed."
