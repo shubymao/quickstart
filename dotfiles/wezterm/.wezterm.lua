@@ -42,7 +42,7 @@ config.skip_close_confirmation_for_processes_named = {
   'wsl.exe',
   'wslhost.exe',
 }
-config.confirm_close_pane = false
+
 config.window_padding = {
     left = 0,
     right = 0,
