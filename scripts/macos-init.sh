@@ -290,6 +290,177 @@ configure_dock_apps() {
   killall Dock >/dev/null 2>&1 || true
 }
 
+install_fish_conf() {
+  local repo_root="$1"
+  local fish_conf_dir="$HOME/.config/fish/conf.d"
+  local source_fish_config="$repo_root/dotfiles/.config/fish/conf.d/main.fish"
+
+  mkdir -p "$fish_conf_dir"
+
+  if [[ -f "$source_fish_config" ]]; then
+    cp -f "$source_fish_config" "$fish_conf_dir/main.fish"
+    write_step "Installed Fish conf to $fish_conf_dir/main.fish"
+  else
+    warn_step "Fish conf not found: $source_fish_config"
+  fi
+
+  mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+}
+
+install_nvim_config() {
+  local repo_root="$1"
+  local nvim_conf_dir="$HOME/.config/nvim"
+  local source_nvim_dir="$repo_root/dotfiles/.config/nvim"
+
+  mkdir -p "$HOME/.config"
+
+  if [[ -d "$source_nvim_dir" ]]; then
+    rm -rf "$nvim_conf_dir"
+    cp -rf "$source_nvim_dir" "$HOME/.config/"
+    write_step "Installed Neovim config to $nvim_conf_dir"
+    find "$nvim_conf_dir" -type d -exec chmod 755 {} +
+    find "$nvim_conf_dir" -type f -exec chmod 644 {} +
+  else
+    warn_step "Neovim config not found: $source_nvim_dir"
+  fi
+}
+
+install_tmux_conf() {
+  local repo_root="$1"
+  local source_tmux="$repo_root/dotfiles/tmux/.tmux.conf"
+  local target_tmux="$HOME/.tmux.conf"
+
+  if [[ -f "$source_tmux" ]]; then
+    if [[ ! -f "$target_tmux" ]] || ! cmp -s "$source_tmux" "$target_tmux"; then
+      cp -f "$source_tmux" "$target_tmux"
+      write_step "Installed tmux config to $target_tmux"
+    else
+      write_step "Tmux config already up to date: $target_tmux"
+    fi
+  fi
+}
+
+install_tpm() {
+  local tpm_dir="$HOME/.tmux/plugins/tpm"
+  if [[ -d "$tpm_dir" ]]; then
+    write_step "tpm already installed"
+    return
+  fi
+  write_step "Installing tmux plugin manager (tpm)..."
+  git clone https://github.com/tmux-plugins/tpm "$tpm_dir"
+}
+
+install_tmux_sessionizer() {
+  local repo_root="$1"
+  local source_script="$repo_root/scripts/tmux_sessionizer"
+  local target_script="$HOME/.local/bin/tmux_sessionizer"
+
+  mkdir -p "$HOME/.local/bin"
+  if [[ -f "$source_script" ]]; then
+    cp -f "$source_script" "$target_script"
+    chmod +x "$target_script"
+    write_step "Installed tmux sessionizer to $target_script"
+  fi
+}
+
+check_ssh() {
+  local key_path="$HOME/.ssh/id_ed25519"
+  local pub_key_path="${key_path}.pub"
+
+  if [ -f "$key_path" ]; then
+    write_step "SSH key already exists: $key_path"
+    return
+  fi
+
+  write_step "Generating SSH key..."
+  read -r -p "Enter your GitHub email address: " user_email
+
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+
+  ssh-keygen -t ed25519 -C "$user_email" -f "$key_path" -N ""
+
+  write_step "SSH key generated successfully!"
+  echo "-------------------------------------------------------"
+  echo "Copy the text below and add it to GitHub Settings:"
+  echo "-------------------------------------------------------"
+  cat "$pub_key_path"
+  echo "-------------------------------------------------------"
+}
+
+install_opencode() {
+  if command -v opencode >/dev/null 2>&1; then
+    write_step "OpenCode already installed"
+    return
+  fi
+  write_step "Installing OpenCode CLI..."
+  curl -fsSL https://opencode.ai/install | bash
+}
+
+set_fish_default() {
+  local fish_path
+  fish_path=$(command -v fish)
+
+  if [ -z "$fish_path" ]; then
+    warn_step "fish not found, cannot set as default."
+    return 1
+  fi
+
+  if grep -qxF "$fish_path" /etc/shells; then
+    :
+  else
+    write_step "Adding $fish_path to /etc/shells"
+    echo "$fish_path" | sudo tee -a /etc/shells >/dev/null
+  fi
+
+  local current_shell
+  current_shell=$(getent passwd "$USER" | cut -d: -f7)
+
+  if [[ "$current_shell" != "$fish_path" ]]; then
+    write_step "Changing default shell to fish..."
+    sudo chsh -s "$fish_path" "$USER"
+  else
+    write_step "Fish is already the default shell."
+  fi
+}
+
+install_terminal_tools() {
+  local repo_root="$1"
+
+  write_step "Installing terminal tools via Homebrew..."
+
+  install_brew_target "formula" "fish"
+  install_brew_target "formula" "fzf"
+  install_brew_target "formula" "eza"
+  install_brew_target "formula" "zoxide"
+  install_brew_target "formula" "neovim"
+  install_brew_target "formula" "tmux"
+  install_brew_target "formula" "node"
+  install_brew_target "formula" "ripgrep"
+  install_brew_target "formula" "fd"
+  install_brew_target "formula" "tree-sitter-cli"
+  install_brew_target "formula" "cmake"
+  install_brew_target "formula" "ninja"
+
+  if [[ -d "/opt/homebrew/Cellar/neovim" ]] || [[ -d "/usr/local/Cellar/neovim" ]]; then
+    rm -rf ~/.local/share/nvim/luacache
+    rm -rf ~/.local/state/nvim/lazy
+  fi
+
+  install_fish_conf "$repo_root"
+  install_nvim_config "$repo_root"
+  install_tmux_conf "$repo_root"
+  install_tmux_sessionizer "$repo_root"
+  install_tpm
+  install_opencode
+  check_ssh
+
+  write_step "Setting fish as default shell..."
+  set_fish_default || true
+
+  write_step "Terminal tools installation completed."
+}
+
 main() {
   require_macos
 
@@ -321,21 +492,25 @@ main() {
     "7-Zip|formula|p7zip,sevenzip"
     "VLC|cask|vlc"
     "GIMP|cask|gimp"
-    "PDFgear|cask|pdfgear"
     "Tailscale|cask|tailscale"
     "Nextcloud|cask|nextcloud"
     "Jellyfin Media Player|cask|jellyfin-media-player"
     "LibreOffice|cask|libreoffice"
   )
+
   local dev_apps=(
     "WezTerm|cask|wezterm"
     "Alacritty|cask|alacritty"
+    "Karabiner-Elements|cask|karabiner-elements"
+    "Raycast|cask|raycast"
     "Visual Studio Code|cask|visual-studio-code"
     "Joplin|cask|joplin"
     "Proton VPN|cask|protonvpn"
     "VirtualBox|cask|virtualbox"
-    "Karabiner-Elements|cask|karabiner-elements"
-    "Raycast|cask|raycast"
+    "Docker|cask|docker"
+    "OrcaSlicer|cask|orca-slicer"
+    "MusicBrainz Picard|cask|musicbrainz-picard"
+    "Tag Editor|cask|tageditor"
   )
 
   local entry
@@ -349,6 +524,12 @@ main() {
   fi
 
   install_nerd_fonts
+
+  if [[ "$is_dev_profile" == "true" ]]; then
+    install_terminal_tools "$repo_root"
+    install_wezterm_config "$repo_root"
+    configure_karabiner "$repo_root"
+  fi
 
   if [[ "$is_dev_profile" == "true" ]]; then
     install_wezterm_config "$repo_root"
