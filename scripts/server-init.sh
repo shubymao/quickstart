@@ -27,7 +27,8 @@ if ! id "$USERNAME" &>/dev/null; then
     exit 1
   fi
 
-  useradd -m -s /bin/bash "$USERNAME"
+  getent group "$USERNAME" >/dev/null || groupadd "$USERNAME"
+  useradd -m -s /bin/bash -g "$USERNAME" "$USERNAME"
   echo "$USERNAME:$USER_PASS" | chpasswd
   echo "User $USERNAME created successfully."
 else
